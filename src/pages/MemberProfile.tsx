@@ -62,15 +62,22 @@ const MemberProfile = () => {
   }, [isConnected, navigate]);
 
   useEffect(() => {
-    // Initialize Blockscout SDK when component mounts
+    // Initialize Blockscout Service when component mounts
     if (address) {
       blockscoutService.initialize({
-        network: 'optimism-sepolia',
-        baseUrl: 'https://optimism-sepolia.blockscout.com'
+        network: 'optimism',
+        baseUrl: 'https://optimism.blockscout.com',
+        rpcUrl: 'https://optimism.drpc.org',
+        apiKey: 'b3f41bb5-ea66-403c-b270-dd9634e01f92'
       });
 
       // Start monitoring the user's address
-      blockscoutService.watchAddress(address);
+      const stopWatching = blockscoutService.watchAddress(address, (transaction) => {
+        console.log('New transaction detected:', transaction);
+      });
+
+      // Cleanup on unmount
+      return stopWatching;
     }
   }, [address]);
 

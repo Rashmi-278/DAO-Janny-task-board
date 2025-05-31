@@ -1,45 +1,52 @@
 
-import { BlockscoutSDK } from '@blockscout/app-sdk';
 import { notificationService } from '@/lib/notificationService';
 
 interface BlockscoutConfig {
   apiKey?: string;
   baseUrl?: string;
   network?: string;
+  rpcUrl?: string;
 }
 
 class BlockscoutService {
-  private sdk: BlockscoutSDK | null = null;
   private config: BlockscoutConfig = {};
+  private isConnected: boolean = false;
 
   initialize(config: BlockscoutConfig) {
-    this.config = config;
+    this.config = {
+      apiKey: config.apiKey || 'b3f41bb5-ea66-403c-b270-dd9634e01f92',
+      baseUrl: config.baseUrl || 'https://optimism.blockscout.com',
+      network: config.network || 'optimism',
+      rpcUrl: config.rpcUrl || 'https://optimism.drpc.org'
+    };
     
-    try {
-      this.sdk = new BlockscoutSDK({
-        apiKey: config.apiKey,
-        baseUrl: config.baseUrl || 'https://eth.blockscout.com',
-        network: config.network || 'ethereum'
-      });
-      
-      console.log('Blockscout SDK initialized successfully');
-      
-      notificationService.notifyBlockscoutEvent(
-        'SDK Initialized', 
-        `Connected to ${config.network || 'ethereum'} network`
-      );
-    } catch (error) {
-      console.error('Failed to initialize Blockscout SDK:', error);
-    }
+    this.isConnected = true;
+    
+    console.log('Blockscout Service initialized successfully', this.config);
+    
+    notificationService.notifyBlockscoutEvent(
+      'Service Initialized', 
+      `Connected to ${this.config.network} network via ${this.config.baseUrl}`
+    );
   }
 
   async getTransactionDetails(txHash: string) {
-    if (!this.sdk) {
-      throw new Error('Blockscout SDK not initialized');
+    if (!this.isConnected) {
+      throw new Error('Blockscout Service not initialized');
     }
 
     try {
-      const transaction = await this.sdk.getTransaction(txHash);
+      const response = await fetch(`${this.config.baseUrl}/api/v2/transactions/${txHash}`, {
+        headers: {
+          'Authorization': `Bearer ${this.config.apiKey}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const transaction = await response.json();
       
       notificationService.notifyBlockscoutEvent(
         'Transaction Retrieved',
@@ -54,15 +61,26 @@ class BlockscoutService {
   }
 
   async getAddressTransactions(address: string, page = 1, limit = 10) {
-    if (!this.sdk) {
-      throw new Error('Blockscout SDK not initialized');
+    if (!this.isConnected) {
+      throw new Error('Blockscout Service not initialized');
     }
 
     try {
-      const transactions = await this.sdk.getAddressTransactions(address, {
-        page,
-        limit
-      });
+      const response = await fetch(
+        `${this.config.baseUrl}/api/v2/addresses/${address}/transactions?page=${page}&limit=${limit}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.config.apiKey}`
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const transactions = data.items || [];
       
       notificationService.notifyBlockscoutEvent(
         'Address Activity',
@@ -77,12 +95,22 @@ class BlockscoutService {
   }
 
   async getTokenInfo(tokenAddress: string) {
-    if (!this.sdk) {
-      throw new Error('Blockscout SDK not initialized');
+    if (!this.isConnected) {
+      throw new Error('Blockscout Service not initialized');
     }
 
     try {
-      const tokenInfo = await this.sdk.getTokenInfo(tokenAddress);
+      const response = await fetch(`${this.config.baseUrl}/api/v2/tokens/${tokenAddress}`, {
+        headers: {
+          'Authorization': `Bearer ${this.config.apiKey}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const tokenInfo = await response.json();
       
       notificationService.notifyBlockscoutEvent(
         'Token Info Retrieved',
@@ -96,46 +124,52 @@ class BlockscoutService {
     }
   }
 
-  // Monitor address for new transactions
+  // Monitor address for new transactions using polling
   async watchAddress(address: string, callback?: (transaction: any) => void) {
-    if (!this.sdk) {
-      throw new Error('Blockscout SDK not initialized');
+    if (!this.isConnected) {
+      throw new Error('Blockscout Service not initialized');
     }
 
     console.log(`Starting to watch address: ${address}`);
     
     notificationService.notifyBlockscoutEvent(
       'Address Monitoring Started',
-      `Now monitoring ${address.slice(0, 6)}...${address.slice(-4)} for new transactions`
+      `Now monitoring ${address.slice(0, 6)}...${address.slice(-4)} for new transactions on Optimism`
     );
 
-    // This would typically use websockets or polling
-    // For demo purposes, we'll simulate monitoring
-    const simulateMonitoring = () => {
-      // In a real implementation, this would be connected to Blockscout's real-time API
-      setTimeout(() => {
-        notificationService.notifyBlockscoutEvent(
-          'New Transaction Detected',
-          `New activity detected for ${address.slice(0, 6)}...${address.slice(-4)}`
-        );
-        
-        if (callback) {
-          callback({
-            hash: `0x${Math.random().toString(16).substr(2, 64)}`,
-            from: address,
-            to: `0x${Math.random().toString(16).substr(2, 40)}`,
-            value: '0.1',
-            timestamp: new Date()
-          });
+    // Poll for new transactions every 30 seconds
+    const pollInterval = setInterval(async () => {
+      try {
+        const transactions = await this.getAddressTransactions(address, 1, 5);
+        if (transactions.length > 0) {
+          const latestTx = transactions[0];
+          
+          notificationService.notifyBlockscoutEvent(
+            'Transaction Activity Detected',
+            `Latest transaction: ${latestTx.hash?.slice(0, 10)}... on Optimism`
+          );
+          
+          if (callback) {
+            callback(latestTx);
+          }
         }
-      }, 10000); // Simulate activity every 10 seconds
-    };
+      } catch (error) {
+        console.error('Error polling address transactions:', error);
+      }
+    }, 30000); // Poll every 30 seconds
 
-    simulateMonitoring();
+    // Return cleanup function
+    return () => {
+      clearInterval(pollInterval);
+      notificationService.notifyBlockscoutEvent(
+        'Address Monitoring Stopped',
+        `Stopped monitoring ${address.slice(0, 6)}...${address.slice(-4)}`
+      );
+    };
   }
 
   isInitialized(): boolean {
-    return this.sdk !== null;
+    return this.isConnected;
   }
 
   getConfig(): BlockscoutConfig {
