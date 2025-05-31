@@ -100,12 +100,12 @@ const MemberProfile = () => {
         const allProposals = [...ensProposals, ...inchProposals];
         const taskProposals: TaskProposal[] = allProposals.map((proposal, index) => ({
           ...proposal,
-          taskStatus: index % 4 === 0 ? 'todo' : 
-                     index % 4 === 1 ? 'in-progress' :
-                     index % 4 === 2 ? 'review' : 'done',
-          assignee: index % 2 === 0 ? address : undefined, // Only show tasks assigned to current user
-          priority: index % 3 === 0 ? 'high' : index % 3 === 1 ? 'medium' : 'low'
-        })).filter(proposal => proposal.assignee === address); // Filter to only assigned tasks
+          taskStatus: (index % 4 === 0 ? 'todo' : 
+                      index % 4 === 1 ? 'in-progress' :
+                      index % 4 === 2 ? 'review' : 'done') as 'todo' | 'in-progress' | 'review' | 'done',
+          assignee: index % 2 === 0 ? address : undefined,
+          priority: (index % 3 === 0 ? 'high' : index % 3 === 1 ? 'medium' : 'low') as 'low' | 'medium' | 'high'
+        })).filter(proposal => proposal.assignee === address);
 
         setProposals(taskProposals);
       } catch (error) {
@@ -129,7 +129,7 @@ const MemberProfile = () => {
         prev.map(p => p.id === proposalId ? { ...p, taskStatus: newStatus as any } : p)
       );
       
-      // Send notification
+      // Send quirky notification
       notificationService.notifyStatusChange(
         proposal.title,
         statusConfig[oldStatus].label,

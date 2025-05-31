@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 
 export interface Notification {
@@ -66,36 +67,51 @@ class NotificationService {
     this.listeners.forEach(listener => listener(this.notifications));
   }
 
-  // Task-specific notification methods
+  // Quirky DAO Janny notification methods
   notifyTaskAssignment(taskTitle: string, assignee: string) {
     this.addNotification({
       type: 'assignment',
-      title: 'Task Assigned',
-      message: `"${taskTitle}" has been assigned to ${assignee}`,
+      title: '🧹 DAO Janny Alert!',
+      message: `DAO Janny has assigned you "${taskTitle}" - time to clean up the blockchain! 🚀`,
     });
   }
 
   notifyStatusChange(taskTitle: string, oldStatus: string, newStatus: string) {
+    const quirkyMessages = [
+      `The DAO Janny is pleased! "${taskTitle}" moved from ${oldStatus} to ${newStatus} 🎉`,
+      `Task update detected! "${taskTitle}" evolved from ${oldStatus} to ${newStatus} ✨`,
+      `The blockchain spirits whisper: "${taskTitle}" is now ${newStatus} 👻`,
+      `DAO Janny's magic wand worked! "${taskTitle}" transformed to ${newStatus} 🪄`
+    ];
+    
+    const randomMessage = quirkyMessages[Math.floor(Math.random() * quirkyMessages.length)];
+    
     this.addNotification({
       type: 'status_change',
-      title: 'Status Updated',
-      message: `"${taskTitle}" moved from ${oldStatus} to ${newStatus}`,
+      title: '📋 Task Evolution!',
+      message: randomMessage,
     });
   }
 
   notifyTaskUpdate(taskTitle: string, updateType: string) {
+    const quirkyUpdates = {
+      'opted in': `You've volunteered for "${taskTitle}" - the DAO Janny approves! 🙋‍♂️`,
+      'unassigned': `"${taskTitle}" is now free-floating in the DAO-verse 🌌`,
+      'updated': `DAO Janny tweaked "${taskTitle}" with some blockchain magic ✨`
+    };
+
     this.addNotification({
       type: 'task_update',
-      title: 'Task Updated',
-      message: `"${taskTitle}" has been ${updateType}`,
+      title: '⚡ DAO Janny Update',
+      message: quirkyUpdates[updateType as keyof typeof quirkyUpdates] || `"${taskTitle}" has been ${updateType} by the DAO Janny`,
     });
   }
 
   notifyBlockscoutEvent(event: string, details: string) {
     this.addNotification({
       type: 'blockscout_event',
-      title: 'Blockchain Event',
-      message: `${event}: ${details}`,
+      title: '🔗 Blockchain Shenanigans',
+      message: `The DAO Janny spotted some action: ${event} - ${details}`,
     });
   }
 }

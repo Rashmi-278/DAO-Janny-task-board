@@ -94,7 +94,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       await saveToFilecoin(metadata);
       onTaskUpdate?.(safeTask.id, { assignee: 'user.eth' });
       
-      // Send notification
+      // Send quirky notification
       notificationService.notifyTaskUpdate(safeTask.title, 'opted in');
       
       console.log('TaskCard: Delegate opted in successfully:', metadata);
@@ -128,7 +128,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       await saveToFilecoin(metadata);
       onTaskUpdate?.(safeTask.id, { assignee: randomMember });
       
-      // Send notification
+      // Send quirky notification
       notificationService.notifyTaskAssignment(safeTask.title, randomMember);
       
       console.log('TaskCard: Random assignment completed:', metadata);
@@ -145,7 +145,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
     if (!memberId || memberId === "unassigned") {
       onTaskUpdate?.(safeTask.id, { assignee: null });
       
-      // Send notification for unassignment
+      // Send quirky notification for unassignment
       notificationService.notifyTaskUpdate(safeTask.title, 'unassigned');
       return;
     }
@@ -168,7 +168,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       await saveToFilecoin(metadata);
       onTaskUpdate?.(safeTask.id, { assignee: selectedMember.address });
       
-      // Send notification
+      // Send quirky notification
       notificationService.notifyTaskAssignment(safeTask.title, selectedMember.name || selectedMember.address);
       
       console.log('TaskCard: Member assigned successfully:', metadata);
