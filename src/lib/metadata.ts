@@ -1,3 +1,4 @@
+import lighthouse from '@lighthouse-web3/sdk';
 
 interface TaskMetadata {
   action: 'delegate_opt_in' | 'random_assignment' | 'task_creation' | 'task_completion' | 'proposal_categorization' | 'categorization_complete';
@@ -22,36 +23,50 @@ export const generateTaskMetadata = (data: TaskMetadata): TaskMetadata => {
   return metadata;
 };
 
-export const saveToFilecoin = async (metadata: TaskMetadata): Promise<string> => {
+export const saveToLighthouse = async (metadata: TaskMetadata): Promise<string> => {
   try {
-    // In a real implementation, this would interact with Filecoin API
-    // For now, we'll simulate the save operation
-    const cid = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+    // Note: In production, the API key should be stored securely
+    // For now, using a placeholder - users would need to provide their own API key
+    const apiKey = "YOUR_API_KEY"; // This should be replaced with actual API key
+    const name = `dao-janny-${metadata.action}-${metadata.taskId}`;
     
-    console.log('Saving to Filecoin...');
+    console.log('Saving to Lighthouse...');
     console.log('Metadata:', JSON.stringify(metadata, null, 2));
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Convert metadata to text for Lighthouse upload
+    const metadataText = JSON.stringify(metadata, null, 2);
     
-    console.log(`Metadata saved to Filecoin with CID: ${cid}`);
+    const response = await lighthouse.uploadText(metadataText, apiKey, name);
     
-    // Store locally for demonstration
-    const storedMetadata = JSON.parse(localStorage.getItem('filecoin_metadata') || '[]');
-    storedMetadata.push({ cid, metadata, savedAt: new Date().toISOString() });
-    localStorage.setItem('filecoin_metadata', JSON.stringify(storedMetadata));
+    console.log(`Metadata saved to Lighthouse with Hash: ${response.data.Hash}`);
+    console.log('Full response:', response);
     
-    return cid;
+    // Store locally for demonstration (keeping existing functionality)
+    const storedMetadata = JSON.parse(localStorage.getItem('lighthouse_metadata') || '[]');
+    storedMetadata.push({ 
+      hash: response.data.Hash, 
+      name: response.data.Name,
+      size: response.data.Size,
+      metadata, 
+      savedAt: new Date().toISOString() 
+    });
+    localStorage.setItem('lighthouse_metadata', JSON.stringify(storedMetadata));
+    
+    return response.data.Hash;
   } catch (error) {
-    console.error('Failed to save metadata to Filecoin:', error);
+    console.error('Failed to save metadata to Lighthouse:', error);
     throw error;
   }
 };
 
-export const getFilecoinMetadata = (): Array<{ cid: string; metadata: TaskMetadata; savedAt: string }> => {
+export const getLighthouseMetadata = (): Array<{ hash: string; name: string; size: string; metadata: TaskMetadata; savedAt: string }> => {
   try {
-    return JSON.parse(localStorage.getItem('filecoin_metadata') || '[]');
+    return JSON.parse(localStorage.getItem('lighthouse_metadata') || '[]');
   } catch {
     return [];
   }
 };
+
+// Legacy function name for backward compatibility
+export const saveToFilecoin = saveToLighthouse;
+export const getFilecoinMetadata = getLighthouseMetadata;
