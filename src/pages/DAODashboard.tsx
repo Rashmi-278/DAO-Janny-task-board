@@ -16,7 +16,7 @@ const DAODashboard = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <Link to="/">
-            <Button variant="outline" className="border-white/20 text-purple hover:bg-white/10 mb-4">
+            <Button variant="outline" className="border-white/5 text-purple hover:bg-white/10 mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to DAO List
             </Button>
