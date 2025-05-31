@@ -10,12 +10,12 @@ const config = createConfig(
     transports: {
       // RPC URL for each chain
       [optimismSepolia.id]: http(
-        `https://opt-sepolia.g.alchemy.com/v2/exFlRA7r_UeLVbAJExOA2-ZI0SrUFmcm`,
+        process.env.REACT_PUBLIC_ALCHEMY_ID,
       ),
     },
 
     // Required API Keys
-    walletConnectProjectId: "a88dc486e89aa2620b970e5c80f8e7e6",
+    walletConnectProjectId: process.env.REACT_PUBLIC_WALLETCONNCT_PROJECT_ID,
 
     // Required App Info
     appName: "DAO Janny",

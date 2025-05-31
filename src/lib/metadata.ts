@@ -27,7 +27,7 @@ export const saveToLighthouse = async (metadata: TaskMetadata): Promise<string> 
   try {
     // Note: In production, the API key should be stored securely
     // For now, using a placeholder - users would need to provide their own API key
-    const apiKey = "YOUR_API_KEY"; // This should be replaced with actual API key
+    const apiKey = process.env.REACT_PUBLIC_LH_API_KEY; // This should be replaced with actual API key
     const name = `dao-janny-${metadata.action}-${metadata.taskId}`;
     
     console.log('Saving to Lighthouse...');
