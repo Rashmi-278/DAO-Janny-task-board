@@ -1,6 +1,6 @@
 
 interface TaskMetadata {
-  action: 'delegate_opt_in' | 'random_assignment' | 'task_creation' | 'task_completion';
+  action: 'delegate_opt_in' | 'random_assignment' | 'task_creation' | 'task_completion' | 'proposal_categorization' | 'categorization_complete';
   taskId: string;
   timestamp: string;
   delegateAddress?: string;
