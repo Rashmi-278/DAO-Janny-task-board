@@ -25,6 +25,7 @@ interface TaskCardProps {
   task: Task;
   onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
   members?: Member[];
+  status?: string;
 }
 
 const priorityColors = {
@@ -42,7 +43,7 @@ const typeColors = {
   operations: 'bg-indigo-500/20 text-indigo-300'
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members = [] }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members = [], status }) => {
   console.log('TaskCard: Rendering with task:', task);
   
   const [isOptingIn, setIsOptingIn] = useState(false);
@@ -70,6 +71,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
     allowsOptIn: task.allowsOptIn || false,
     allowsRandomAssignment: task.allowsRandomAssignment || false
   };
+
+  // Hide member assignment dropdown for done tasks or tasks that already have an assignee
+  const shouldShowMemberAssignment = status !== 'done' && !safeTask.assignee && members && members.length > 0;
 
   const handleOptIn = async () => {
     console.log('TaskCard: Opt in clicked for task:', safeTask.id);
@@ -197,7 +201,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             </span>
           </div>
           
-          {members && members.length > 0 && (
+          {shouldShowMemberAssignment && (
             <div className="space-y-2">
               <label className="text-xs text-gray-400">Assign Member:</label>
               <Select

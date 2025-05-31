@@ -29,6 +29,7 @@ interface TaskColumnProps {
 export const TaskColumn: React.FC<TaskColumnProps> = ({ 
   title, 
   tasks, 
+  status,
   onTaskUpdate, 
   members = [] 
 }) => {
@@ -48,6 +49,7 @@ export const TaskColumn: React.FC<TaskColumnProps> = ({
             task={task} 
             onTaskUpdate={onTaskUpdate}
             members={members}
+            status={status}
           />
         ))}
         
