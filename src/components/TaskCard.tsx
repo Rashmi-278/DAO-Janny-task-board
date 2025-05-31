@@ -264,7 +264,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
                   variant="outline"
                   onClick={handleOptIn}
                   disabled={isOptingIn}
-                  className="text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+                  className="text-xs h-7 bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
                 >
                   {isOptingIn ? (
                     <Check className="w-3 h-3 mr-1" />
@@ -284,7 +284,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
                 variant="outline"
                 onClick={handleRandomAssignment}
                 disabled={isAssigning}
-                className="w-full text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+                className="w-full text-xs h-7 bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
               >
                 <Dice6 className="w-3 h-3 mr-1" />
                 {isAssigning ? 'Randomly Assigning...' : 'Random Assignment'}
