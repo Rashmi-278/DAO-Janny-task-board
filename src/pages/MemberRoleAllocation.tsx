@@ -263,12 +263,16 @@ const MemberRoleAllocation = () => {
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex flex-col gap-1">
-                    <Badge className={roles.find(r => r.value === memberRoles[member.id])?.color || 'bg-gray-500/20 text-gray-300'}>
-                      {roles.find(r => r.value === memberRoles[member.id])?.label || 'Unassigned'}
-                    </Badge>
-                    <Badge className={domains.find(d => d.value === memberDomains[member.id])?.color || 'bg-gray-500/20 text-gray-300'}>
-                      {domains.find(d => d.value === memberDomains[member.id])?.label || 'Unassigned'}
-                    </Badge>
+                    {memberRoles[member.id] !== 'unassigned' && (
+                      <Badge className={roles.find(r => r.value === memberRoles[member.id])?.color || 'bg-gray-500/20 text-gray-300'}>
+                        {roles.find(r => r.value === memberRoles[member.id])?.label || 'Unassigned'}
+                      </Badge>
+                    )}
+                    {memberDomains[member.id] !== 'unassigned' && (
+                      <Badge className={domains.find(d => d.value === memberDomains[member.id])?.color || 'bg-gray-500/20 text-gray-300'}>
+                        {domains.find(d => d.value === memberDomains[member.id])?.label || 'Unassigned'}
+                      </Badge>
+                    )}
                     {member.onchainRole && (
                       <Badge variant="outline" className="border-yellow-400/50 text-yellow-300 text-xs">
                         {member.onchainRole}
