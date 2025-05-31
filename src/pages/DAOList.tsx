@@ -15,7 +15,8 @@ const mockDAOs = [
     activeProposals: 6,
     treasuryValue: '$125M',
     category: 'Protocol DAO',
-    logo: '🌀'
+    logo: '🌀',
+    apiUrl: 'https://proposalsuri.daostar.org/proposals/1inch.eth'
   },
   {
     id: 'ens',
@@ -25,17 +26,8 @@ const mockDAOs = [
     activeProposals: 9,
     treasuryValue: '$78M',
     category: 'Protocol DAO',
-    logo: '📛'
-  },
-  {
-    id: 'uniswap',
-    name: 'Uniswap DAO',
-    description: 'Decentralized exchange protocol governance',
-    members: 45000,
-    activeProposals: 12,
-    treasuryValue: '$2.1B',
-    category: 'Protocol DAO',
-    logo: '🦄'
+    logo: '📛',
+    apiUrl: 'https://proposalsuri.daostar.org/proposals/ens.eth?onchain=ens'
   }
 ];
 
