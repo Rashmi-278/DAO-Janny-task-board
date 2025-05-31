@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { ProposalBoard } from '@/components/ProposalBoard';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { Toaster } from '@/components/ui/sonner';
 
 const DAOKanbanBoard = () => {
   const { daoId } = useParams();
@@ -28,6 +28,8 @@ const DAOKanbanBoard = () => {
         
         <ProposalBoard />
       </main>
+      
+      <Toaster />
     </div>
   );
 };

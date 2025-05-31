@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, User, Dice6, ExternalLink, UserPlus, Check } from 'lucide-react';
 import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 import type { Member } from '@/lib/memberService';
+import { notificationService } from '@/lib/notificationService';
 
 interface Task {
   id: string;
@@ -93,6 +94,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       await saveToFilecoin(metadata);
       onTaskUpdate?.(safeTask.id, { assignee: 'user.eth' });
       
+      // Send notification
+      notificationService.notifyTaskUpdate(safeTask.title, 'opted in');
+      
       console.log('TaskCard: Delegate opted in successfully:', metadata);
     } catch (error) {
       console.error('TaskCard: Failed to opt in:', error);
@@ -124,6 +128,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       await saveToFilecoin(metadata);
       onTaskUpdate?.(safeTask.id, { assignee: randomMember });
       
+      // Send notification
+      notificationService.notifyTaskAssignment(safeTask.title, randomMember);
+      
       console.log('TaskCard: Random assignment completed:', metadata);
     } catch (error) {
       console.error('TaskCard: Failed to assign randomly:', error);
@@ -137,6 +144,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
     
     if (!memberId || memberId === "unassigned") {
       onTaskUpdate?.(safeTask.id, { assignee: null });
+      
+      // Send notification for unassignment
+      notificationService.notifyTaskUpdate(safeTask.title, 'unassigned');
       return;
     }
     
@@ -157,6 +167,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
 
       await saveToFilecoin(metadata);
       onTaskUpdate?.(safeTask.id, { assignee: selectedMember.address });
+      
+      // Send notification
+      notificationService.notifyTaskAssignment(safeTask.title, selectedMember.name || selectedMember.address);
       
       console.log('TaskCard: Member assigned successfully:', metadata);
     } catch (error) {
