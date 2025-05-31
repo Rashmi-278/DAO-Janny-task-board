@@ -11,6 +11,8 @@ interface Task {
   priority: 'low' | 'medium' | 'high';
   deadline: string;
   type: string;
+  allowsOptIn?: boolean;
+  allowsRandomAssignment?: boolean;
 }
 
 interface TaskColumnProps {
@@ -18,9 +20,10 @@ interface TaskColumnProps {
   tasks: Task[];
   status: string;
   color: string;
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
-export const TaskColumn: React.FC<TaskColumnProps> = ({ title, tasks, status, color }) => {
+export const TaskColumn: React.FC<TaskColumnProps> = ({ title, tasks, status, color, onTaskUpdate }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-3">
@@ -33,7 +36,7 @@ export const TaskColumn: React.FC<TaskColumnProps> = ({ title, tasks, status, co
       
       <div className="space-y-3">
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+          <TaskCard key={task.id} task={task} onTaskUpdate={onTaskUpdate} />
         ))}
         
         {tasks.length === 0 && (

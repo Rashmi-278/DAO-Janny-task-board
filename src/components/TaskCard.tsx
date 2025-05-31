@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, User, Dice6, ExternalLink } from 'lucide-react';
+import { Calendar, User, Dice6, ExternalLink, UserPlus, Check } from 'lucide-react';
+import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 
 interface Task {
   id: string;
@@ -13,10 +14,13 @@ interface Task {
   priority: 'low' | 'medium' | 'high';
   deadline: string;
   type: string;
+  allowsOptIn?: boolean;
+  allowsRandomAssignment?: boolean;
 }
 
 interface TaskCardProps {
   task: Task;
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
 const priorityColors = {
@@ -32,7 +36,69 @@ const typeColors = {
   technical: 'bg-cyan-500/20 text-cyan-300'
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
+  const [isOptingIn, setIsOptingIn] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  const handleOptIn = async () => {
+    setIsOptingIn(true);
+    
+    try {
+      // Generate metadata for opt-in action
+      const metadata = generateTaskMetadata({
+        action: 'delegate_opt_in',
+        taskId: task.id,
+        timestamp: new Date().toISOString(),
+        delegateAddress: 'user.eth', // This would come from wallet connection
+        taskDetails: task
+      });
+
+      // Save metadata to Filecoin
+      await saveToFilecoin(metadata);
+
+      // Update task with assignee
+      onTaskUpdate?.(task.id, { assignee: 'user.eth' });
+      
+      console.log('Delegate opted in successfully:', metadata);
+    } catch (error) {
+      console.error('Failed to opt in:', error);
+    } finally {
+      setIsOptingIn(false);
+    }
+  };
+
+  const handleRandomAssignment = async () => {
+    setIsAssigning(true);
+    
+    try {
+      // Generate random delegate (in real app, this would use Pyth Entropy API)
+      const randomDelegates = ['alice.eth', 'bob.eth', 'charlie.eth', 'diana.eth'];
+      const randomDelegate = randomDelegates[Math.floor(Math.random() * randomDelegates.length)];
+      
+      // Generate metadata for random assignment
+      const metadata = generateTaskMetadata({
+        action: 'random_assignment',
+        taskId: task.id,
+        timestamp: new Date().toISOString(),
+        assignedDelegate: randomDelegate,
+        taskDetails: task,
+        randomnessSource: 'pyth_entropy' // Would be actual entropy data
+      });
+
+      // Save metadata to Filecoin
+      await saveToFilecoin(metadata);
+
+      // Update task with random assignee
+      onTaskUpdate?.(task.id, { assignee: randomDelegate });
+      
+      console.log('Random assignment completed:', metadata);
+    } catch (error) {
+      console.error('Failed to assign randomly:', error);
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   return (
     <Card className="backdrop-blur-lg bg-white/10 border-white/20 hover:bg-white/15 transition-all duration-300 group">
       <CardHeader className="pb-3">
@@ -43,7 +109,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
           <Button 
             variant="ghost" 
             size="sm"
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto text-gray-400 hover:text-white"
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto text-gray-400 hover:text-white hover:bg-white/10"
           >
             <ExternalLink className="w-3 h-3" />
           </Button>
@@ -78,21 +144,34 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="text-xs h-7 border-white/20 text-white hover:bg-white/10"
-                >
-                  Assign
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="text-xs h-7 border-white/20 text-white hover:bg-white/10"
-                >
-                  <Dice6 className="w-3 h-3 mr-1" />
-                  Random
-                </Button>
+                {task.allowsOptIn && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={handleOptIn}
+                    disabled={isOptingIn}
+                    className="text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+                  >
+                    {isOptingIn ? (
+                      <Check className="w-3 h-3 mr-1" />
+                    ) : (
+                      <UserPlus className="w-3 h-3 mr-1" />
+                    )}
+                    {isOptingIn ? 'Opting...' : 'Opt In'}
+                  </Button>
+                )}
+                {task.allowsRandomAssignment && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={handleRandomAssignment}
+                    disabled={isAssigning}
+                    className="text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+                  >
+                    <Dice6 className="w-3 h-3 mr-1" />
+                    {isAssigning ? 'Assigning...' : 'Random'}
+                  </Button>
+                )}
               </div>
             )}
           </div>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, Vote, TrendingUp, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Header } from '@/components/Header';
 
 const mockDAOs = [
   {
@@ -48,18 +49,8 @@ const categoryColors = {
 const DAOList = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="backdrop-blur-lg bg-white/10 border-b border-white/20">
-        <div className="container mx-auto px-4 py-6">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-white mb-2">ShoreGun</h1>
-            <p className="text-xl text-gray-300 mb-4">DAO Proposal Execution Boards</p>
-            <p className="text-gray-400 max-w-2xl mx-auto">
-              Turn DAO proposals into actionable tasks with delegate assignment and execution tracking
-            </p>
-          </div>
-        </div>
-      </div>
-
+      <Header />
+      
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-white mb-2">Select a DAO</h2>
@@ -97,7 +88,7 @@ const DAOList = () => {
                 </div>
 
                 <Link to={`/dao/${dao.id}`}>
-                  <Button className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
+                  <Button className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0">
                     <Shield className="w-4 h-4 mr-2" />
                     View Execution Board
                   </Button>
@@ -115,7 +106,7 @@ const DAOList = () => {
               <p className="text-gray-400 text-sm text-center">
                 Connect your DAO to start tracking proposal execution
               </p>
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white">
                 Request Integration
               </Button>
             </CardContent>

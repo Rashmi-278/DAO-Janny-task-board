@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TaskColumn } from '@/components/TaskColumn';
+import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 
-const mockProposals = {
+const initialProposals = {
   todo: [
     {
       id: '1',
@@ -11,7 +12,9 @@ const mockProposals = {
       assignee: null,
       priority: 'high' as const,
       deadline: '2024-06-15',
-      type: 'governance'
+      type: 'governance',
+      allowsOptIn: true,
+      allowsRandomAssignment: false
     },
     {
       id: '2',
@@ -20,7 +23,9 @@ const mockProposals = {
       assignee: null,
       priority: 'medium' as const,
       deadline: '2024-06-20',
-      type: 'treasury'
+      type: 'treasury',
+      allowsOptIn: true,
+      allowsRandomAssignment: true
     }
   ],
   inProgress: [
@@ -31,7 +36,9 @@ const mockProposals = {
       assignee: 'vitalik.eth',
       priority: 'medium' as const,
       deadline: '2024-06-10',
-      type: 'community'
+      type: 'community',
+      allowsOptIn: false,
+      allowsRandomAssignment: true
     }
   ],
   completed: [
@@ -42,33 +49,71 @@ const mockProposals = {
       assignee: 'developer.eth',
       priority: 'high' as const,
       deadline: '2024-05-30',
-      type: 'technical'
+      type: 'technical',
+      allowsOptIn: false,
+      allowsRandomAssignment: false
     }
   ]
 };
 
 export const ProposalBoard = () => {
+  const [proposals, setProposals] = useState(initialProposals);
+
+  const handleTaskUpdate = async (taskId: string, updates: any) => {
+    const newProposals = { ...proposals };
+    
+    // Find and update the task
+    Object.keys(newProposals).forEach(status => {
+      const taskIndex = newProposals[status as keyof typeof newProposals].findIndex(task => task.id === taskId);
+      if (taskIndex !== -1) {
+        newProposals[status as keyof typeof newProposals][taskIndex] = {
+          ...newProposals[status as keyof typeof newProposals][taskIndex],
+          ...updates
+        };
+      }
+    });
+
+    setProposals(newProposals);
+
+    // Generate and save metadata for task update
+    const metadata = generateTaskMetadata({
+      action: 'task_creation',
+      taskId,
+      timestamp: new Date().toISOString(),
+      taskDetails: { taskId, updates }
+    });
+
+    try {
+      await saveToFilecoin(metadata);
+    } catch (error) {
+      console.error('Failed to save task update metadata:', error);
+    }
+  };
+
   return (
     <div>
       <h2 className="text-3xl font-bold text-white mb-6">Proposal Execution Board</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <TaskColumn 
           title="To Do" 
-          tasks={mockProposals.todo} 
+          tasks={proposals.todo} 
           status="todo"
           color="from-gray-500 to-gray-600"
+          onTaskUpdate={handleTaskUpdate}
         />
         <TaskColumn 
           title="In Progress" 
-          tasks={mockProposals.inProgress} 
+          tasks={proposals.inProgress} 
           status="inProgress"
           color="from-blue-500 to-purple-600"
+          onTaskUpdate={handleTaskUpdate}
         />
         <TaskColumn 
           title="Completed" 
-          tasks={mockProposals.completed} 
+          tasks={proposals.completed} 
           status="completed"
           color="from-green-500 to-emerald-600"
+          onTaskUpdate={handleTaskUpdate}
         />
       </div>
     </div>
