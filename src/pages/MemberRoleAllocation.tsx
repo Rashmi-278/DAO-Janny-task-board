@@ -19,6 +19,15 @@ const roles = [
   { value: 'unassigned', label: 'Unassigned', color: 'bg-gray-500/20 text-gray-300' }
 ];
 
+const domains = [
+  { value: 'tech', label: 'Tech', color: 'bg-green-500/20 text-green-300' },
+  { value: 'contracts', label: 'Contracts', color: 'bg-orange-500/20 text-orange-300' },
+  { value: 'accounting', label: 'Accounting', color: 'bg-yellow-500/20 text-yellow-300' },
+  { value: 'business_development', label: 'Business Development', color: 'bg-red-500/20 text-red-300' },
+  { value: 'strategy', label: 'Strategy', color: 'bg-indigo-500/20 text-indigo-300' },
+  { value: 'unassigned', label: 'Unassigned', color: 'bg-gray-500/20 text-gray-300' }
+];
+
 const MemberRoleAllocation = () => {
   const { daoId } = useParams();
   const navigate = useNavigate();
@@ -26,8 +35,10 @@ const MemberRoleAllocation = () => {
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [memberRoles, setMemberRoles] = useState<Record<string, string>>({});
+  const [memberDomains, setMemberDomains] = useState<Record<string, string>>({});
   const [processingComplete, setProcessingComplete] = useState(false);
   const [searchAddress, setSearchAddress] = useState('');
+  const [showAssignedOnly, setShowAssignedOnly] = useState(false);
 
   useEffect(() => {
     const loadMembers = async () => {
@@ -39,12 +50,15 @@ const MemberRoleAllocation = () => {
         setMembers(fetchedMembers);
         setFilteredMembers(fetchedMembers);
         
-        // Initialize with default roles
+        // Initialize with default roles and domains
         const initialRoles: Record<string, string> = {};
+        const initialDomains: Record<string, string> = {};
         fetchedMembers.forEach(member => {
           initialRoles[member.id] = member.role || 'unassigned';
+          initialDomains[member.id] = member.domain || 'unassigned';
         });
         setMemberRoles(initialRoles);
+        setMemberDomains(initialDomains);
         
       } catch (error) {
         console.error('Failed to load members:', error);
@@ -57,16 +71,25 @@ const MemberRoleAllocation = () => {
   }, [daoId]);
 
   useEffect(() => {
-    if (searchAddress.trim() === '') {
-      setFilteredMembers(members);
-    } else {
-      const filtered = members.filter(member => 
+    let filtered = members;
+    
+    // Filter by search
+    if (searchAddress.trim() !== '') {
+      filtered = filtered.filter(member => 
         member.address.toLowerCase().includes(searchAddress.toLowerCase()) ||
         member.name?.toLowerCase().includes(searchAddress.toLowerCase())
       );
-      setFilteredMembers(filtered);
     }
-  }, [searchAddress, members]);
+    
+    // Filter by assignment status
+    if (showAssignedOnly) {
+      filtered = filtered.filter(member => 
+        memberRoles[member.id] !== 'unassigned' || memberDomains[member.id] !== 'unassigned'
+      );
+    }
+    
+    setFilteredMembers(filtered);
+  }, [searchAddress, members, showAssignedOnly, memberRoles, memberDomains]);
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     setMemberRoles(prev => ({
@@ -94,6 +117,32 @@ const MemberRoleAllocation = () => {
     }
   };
 
+  const handleDomainChange = async (memberId: string, newDomain: string) => {
+    setMemberDomains(prev => ({
+      ...prev,
+      [memberId]: newDomain
+    }));
+
+    // Generate metadata for domain assignment
+    const metadata = generateTaskMetadata({
+      action: 'delegate_opt_in',
+      taskId: `${memberId}-domain`,
+      timestamp: new Date().toISOString(),
+      delegateAddress: members.find(m => m.id === memberId)?.address,
+      taskDetails: {
+        memberId,
+        newDomain,
+        daoId
+      }
+    });
+
+    try {
+      await saveToFilecoin(metadata);
+    } catch (error) {
+      console.error('Failed to save domain assignment metadata:', error);
+    }
+  };
+
   const handleProceedToKanban = async () => {
     setProcessingComplete(true);
 
@@ -105,7 +154,8 @@ const MemberRoleAllocation = () => {
       taskDetails: {
         daoId,
         totalMembers: members.length,
-        roleAllocations: memberRoles
+        roleAllocations: memberRoles,
+        domainAllocations: memberDomains
       }
     });
 
@@ -122,6 +172,10 @@ const MemberRoleAllocation = () => {
       navigate(`/dao/${daoId}/board`);
     }
   };
+
+  const assignedCount = members.filter(member => 
+    memberRoles[member.id] !== 'unassigned' || memberDomains[member.id] !== 'unassigned'
+  ).length;
 
   if (loading) {
     return (
@@ -153,8 +207,10 @@ const MemberRoleAllocation = () => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-white capitalize">{daoId} DAO</h1>
-              <p className="text-gray-300">Assign roles to DAO members before proposal execution board</p>
-              <p className="text-gray-400 text-sm mt-1">Total members: {members.length} | Filtered: {filteredMembers.length}</p>
+              <p className="text-gray-300">Assign roles and domains to DAO members before proposal execution board</p>
+              <p className="text-gray-400 text-sm mt-1">
+                Total members: {members.length} | Filtered: {filteredMembers.length} | Assigned: {assignedCount}
+              </p>
             </div>
             
             <Button 
@@ -176,16 +232,28 @@ const MemberRoleAllocation = () => {
             </Button>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="Search by address or name..."
-              value={searchAddress}
-              onChange={(e) => setSearchAddress(e.target.value)}
-              className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-            />
+          {/* Search and Filter Controls */}
+          <div className="flex gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder="Search by address or name..."
+                value={searchAddress}
+                onChange={(e) => setSearchAddress(e.target.value)}
+                className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+              />
+            </div>
+            <Button
+              variant={showAssignedOnly ? "default" : "outline"}
+              onClick={() => setShowAssignedOnly(!showAssignedOnly)}
+              className={showAssignedOnly 
+                ? "bg-blue-600 text-white" 
+                : "border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+              }
+            >
+              {showAssignedOnly ? "Show All" : "Show Assigned Only"}
+            </Button>
           </div>
         </div>
 
@@ -198,15 +266,14 @@ const MemberRoleAllocation = () => {
                     <Badge className={roles.find(r => r.value === memberRoles[member.id])?.color || 'bg-gray-500/20 text-gray-300'}>
                       {roles.find(r => r.value === memberRoles[member.id])?.label || 'Unassigned'}
                     </Badge>
+                    <Badge className={domains.find(d => d.value === memberDomains[member.id])?.color || 'bg-gray-500/20 text-gray-300'}>
+                      {domains.find(d => d.value === memberDomains[member.id])?.label || 'Unassigned'}
+                    </Badge>
                     {member.onchainRole && (
                       <Badge variant="outline" className="border-yellow-400/50 text-yellow-300 text-xs">
                         {member.onchainRole}
                       </Badge>
                     )}
-                  </div>
-                  <div className="flex items-center text-gray-400 text-xs">
-                    <Users className="w-3 h-3 mr-1" />
-                    {member.votingWeight || 0}
                   </div>
                 </div>
                 <CardTitle className="text-white text-lg leading-tight">
@@ -220,30 +287,51 @@ const MemberRoleAllocation = () => {
               <CardContent className="space-y-4">
                 <div className="text-xs text-gray-400 space-y-1">
                   <div>Delegated Votes: {member.delegatedVotes?.toLocaleString() || 0}</div>
-                  <div>Voting Weight: {member.votingWeight?.toLocaleString() || 0}</div>
-                  <div>Proposals Created: {member.proposalsCreated || 0}</div>
                   <div>Type: {member.type || 'EthereumAddress'}</div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Assign Role
-                  </label>
-                  <Select
-                    value={memberRoles[member.id] || 'unassigned'}
-                    onValueChange={(value) => handleRoleChange(member.id, value)}
-                  >
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-white/20">
-                      {roles.map((role) => (
-                        <SelectItem key={role.value} value={role.value} className="text-white hover:bg-white/10">
-                          {role.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Assign Role
+                    </label>
+                    <Select
+                      value={memberRoles[member.id] || 'unassigned'}
+                      onValueChange={(value) => handleRoleChange(member.id, value)}
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-white/20 z-50">
+                        {roles.map((role) => (
+                          <SelectItem key={role.value} value={role.value} className="text-white hover:bg-white/10">
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Domain Specialty
+                    </label>
+                    <Select
+                      value={memberDomains[member.id] || 'unassigned'}
+                      onValueChange={(value) => handleDomainChange(member.id, value)}
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue placeholder="Select domain" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-white/20 z-50">
+                        {domains.map((domain) => (
+                          <SelectItem key={domain.value} value={domain.value} className="text-white hover:bg-white/10">
+                            {domain.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardContent>
             </Card>

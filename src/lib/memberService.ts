@@ -4,11 +4,10 @@ export interface Member {
   name?: string;
   address: string;
   delegatedVotes?: number;
-  votingWeight?: number;
-  proposalsCreated?: number;
   role?: 'reviewer' | 'executor' | 'analyst' | 'coordinator' | 'unassigned';
   onchainRole?: string;
   type?: string;
+  domain?: 'tech' | 'contracts' | 'accounting' | 'business_development' | 'strategy' | 'unassigned';
 }
 
 async function fetchAllMembersWithPagination(baseUrl: string, daoId: string): Promise<any[]> {
@@ -30,21 +29,31 @@ async function fetchAllMembersWithPagination(baseUrl: string, daoId: string): Pr
           allMembers = allMembers.concat(data.Members.members.onchain.members);
           cursor = data.Members.members.onchain.onchain_cursor_str;
         }
-        // Add offchain members if available
+        // For 1inch, fetch all available members
+        else if (daoId === '1inch') {
+          // Try different structures for 1inch
+          if (data.Members.members.members) {
+            allMembers = allMembers.concat(data.Members.members.members);
+          } else if (data.Members.members.offchain?.members) {
+            allMembers = allMembers.concat(data.Members.members.offchain.members);
+          } else if (data.Members.members.onchain?.members) {
+            allMembers = allMembers.concat(data.Members.members.onchain.members);
+          }
+          
+          // Check for cursor in different locations
+          cursor = data.Members.members.onchain?.onchain_cursor_str || 
+                   data.Members.members.offchain?.offchain_cursor_str || 
+                   null;
+        }
+        // Add offchain members if available for ENS as fallback
         else if (data.Members.members.offchain?.members) {
           allMembers = allMembers.concat(data.Members.members.offchain.members);
           cursor = data.Members.members.offchain.offchain_cursor_str;
         }
-        // For 1inch, use whatever structure is available
-        else if (data.Members.members.members) {
-          allMembers = allMembers.concat(data.Members.members.members);
-          cursor = null; // No cursor info available for this structure
-          hasMore = false;
-        }
       }
       
       // Check if we should continue pagination
-      if (!cursor || allMembers.length >= 100) { // Limit to 100 members for performance
+      if (!cursor || allMembers.length >= 200) { // Increased limit for better coverage
         hasMore = false;
       }
       
@@ -84,11 +93,10 @@ export async function fetchDAOMembers(daoId: string): Promise<Member[]> {
           name: member.name || member.ens || `Member ${index + 1}`,
           address: address,
           delegatedVotes: member.delegatedVotes || member.voting_weight || Math.floor(Math.random() * 1000),
-          votingWeight: member.votingWeight || member.delegated_votes || Math.floor(Math.random() * 100),
-          proposalsCreated: member.proposalsCreated || Math.floor(Math.random() * 10),
           role: 'unassigned',
           onchainRole: member.role || undefined,
-          type: member.type || 'EthereumAddress'
+          type: member.type || 'EthereumAddress',
+          domain: 'unassigned'
         };
       });
     
