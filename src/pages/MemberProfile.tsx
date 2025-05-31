@@ -5,46 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Bell, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Bell, CheckCircle, Clock, AlertCircle, User, Calendar } from 'lucide-react';
 import { Header } from '@/components/Header';
-import { useNotification, useTransactionPopup } from "@blockscout/app-sdk";
-
-// Mock data for assigned proposals - in real app this would come from API
-const mockAssignedProposals = [
-  {
-    id: "prop-1",
-    title: "Upgrade Protocol V2",
-    description: "Implement new features for protocol enhancement",
-    status: "todo",
-    priority: "high" as const,
-    deadline: "2024-01-15",
-    assigneeRole: "reviewer",
-    domain: "tech",
-    daoId: "ens"
-  },
-  {
-    id: "prop-2", 
-    title: "Treasury Allocation Review",
-    description: "Review and approve quarterly treasury allocation",
-    status: "in-progress",
-    priority: "medium" as const,
-    deadline: "2024-01-20",
-    assigneeRole: "analyst",
-    domain: "accounting",
-    daoId: "ens"
-  },
-  {
-    id: "prop-3",
-    title: "Partnership Agreement",
-    description: "Draft partnership terms with external protocol",
-    status: "review",
-    priority: "low" as const,
-    deadline: "2024-01-25",
-    assigneeRole: "coordinator",
-    domain: "business_development",
-    daoId: "1inch"
-  }
-];
+import { fetchDAOProposals, type Proposal } from '@/lib/proposalService';
 
 const statusConfig = {
   todo: { label: 'To Do', color: 'bg-gray-500/20 text-gray-300', icon: Clock },
@@ -59,12 +23,34 @@ const priorityConfig = {
   high: { label: 'High', color: 'bg-red-500/20 text-red-300' }
 };
 
+const categoryColors = {
+  governance: 'bg-purple-500/20 text-purple-300',
+  treasury: 'bg-blue-500/20 text-blue-300',
+  technical: 'bg-cyan-500/20 text-cyan-300',
+  community: 'bg-pink-500/20 text-pink-300',
+  grants: 'bg-orange-500/20 text-orange-300',
+  operations: 'bg-gray-500/20 text-gray-300'
+};
+
+// Mock members for assignment
+const mockMembers = [
+  { id: '1', name: 'Alice Cooper', address: '0x1234...5678' },
+  { id: '2', name: 'Bob Wilson', address: '0x2345...6789' },
+  { id: '3', name: 'Charlie Brown', address: '0x3456...7890' },
+  { id: '4', name: 'Diana Prince', address: '0x4567...8901' }
+];
+
+interface TaskProposal extends Proposal {
+  taskStatus: 'todo' | 'in-progress' | 'review' | 'done';
+  assignee?: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
 const MemberProfile = () => {
   const { address, isConnected } = useAccount();
   const navigate = useNavigate();
-  const { openTxToast } = useNotification();
-  const { openPopup } = useTransactionPopup();
-  const [proposals, setProposals] = useState(mockAssignedProposals);
+  const [proposals, setProposals] = useState<TaskProposal[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isConnected) {
@@ -72,38 +58,74 @@ const MemberProfile = () => {
     }
   }, [isConnected, navigate]);
 
-  const handleStatusChange = async (proposalId: string, newStatus: string) => {
-    setProposals(prev => 
-      prev.map(p => p.id === proposalId ? { ...p, status: newStatus } : p)
-    );
+  useEffect(() => {
+    const loadProposals = async () => {
+      setLoading(true);
+      try {
+        // Fetch proposals from both DAOs
+        const [ensProposals, inchProposals] = await Promise.all([
+          fetchDAOProposals('ens'),
+          fetchDAOProposals('1inch')
+        ]);
 
-    // Simulate a transaction for status update
-    const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-    try {
-      await openTxToast("10", mockTxHash); // Using Optimism chain ID
-    } catch (error) {
-      console.error('Failed to show transaction toast:', error);
-    }
+        // Transform proposals to task format
+        const allProposals = [...ensProposals, ...inchProposals];
+        const taskProposals: TaskProposal[] = allProposals.map((proposal, index) => ({
+          ...proposal,
+          taskStatus: index % 4 === 0 ? 'todo' : 
+                     index % 4 === 1 ? 'in-progress' :
+                     index % 4 === 2 ? 'review' : 'done',
+          assignee: index % 3 === 0 ? mockMembers[index % mockMembers.length].name : undefined,
+          priority: index % 3 === 0 ? 'high' : index % 3 === 1 ? 'medium' : 'low'
+        }));
+
+        setProposals(taskProposals);
+      } catch (error) {
+        console.error('Failed to load proposals:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProposals();
+  }, []);
+
+  const handleStatusChange = (proposalId: string, newStatus: string) => {
+    setProposals(prev => 
+      prev.map(p => p.id === proposalId ? { ...p, taskStatus: newStatus as any } : p)
+    );
+    console.log(`Status changed for ${proposalId} to ${newStatus}`);
   };
 
-  const handleViewTransactionHistory = () => {
-    if (address) {
-      openPopup({
-        chainId: "10", // Optimism
-        address: address
-      });
-    }
+  const handleAssignMember = (proposalId: string, memberName: string) => {
+    setProposals(prev => 
+      prev.map(p => p.id === proposalId ? { ...p, assignee: memberName } : p)
+    );
+    console.log(`Assigned ${memberName} to proposal ${proposalId}`);
   };
 
   const groupedProposals = {
-    todo: proposals.filter(p => p.status === 'todo'),
-    'in-progress': proposals.filter(p => p.status === 'in-progress'),
-    review: proposals.filter(p => p.status === 'review'),
-    done: proposals.filter(p => p.status === 'done')
+    todo: proposals.filter(p => p.taskStatus === 'todo'),
+    'in-progress': proposals.filter(p => p.taskStatus === 'in-progress'),
+    review: proposals.filter(p => p.taskStatus === 'review'),
+    done: proposals.filter(p => p.taskStatus === 'done')
   };
 
   if (!isConnected) {
     return null;
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-white">Loading proposals...</div>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -125,18 +147,8 @@ const MemberProfile = () => {
               <h1 className="text-3xl font-bold text-white">Member Profile</h1>
               <p className="text-gray-300">Address: {address?.slice(0, 6)}...{address?.slice(-4)}</p>
               <p className="text-gray-400 text-sm mt-1">
-                Total assigned proposals: {proposals.length}
+                Total proposals: {proposals.length}
               </p>
-            </div>
-            
-            <div className="flex gap-3">
-              <Button 
-                onClick={handleViewTransactionHistory}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0"
-              >
-                <Bell className="w-4 h-4 mr-2" />
-                Transaction History
-              </Button>
             </div>
           </div>
         </div>
@@ -162,11 +174,16 @@ const MemberProfile = () => {
                     <Card key={proposal.id} className="backdrop-blur-lg bg-white/10 border-white/20 hover:bg-white/15 transition-all duration-300">
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between mb-2">
-                          <Badge className={priorityConfig[proposal.priority].color}>
-                            {priorityConfig[proposal.priority].label}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1">
+                            <Badge className={priorityConfig[proposal.priority].color}>
+                              {priorityConfig[proposal.priority].label}
+                            </Badge>
+                            <Badge className={categoryColors[proposal.category as keyof typeof categoryColors] || 'bg-gray-500/20 text-gray-300'}>
+                              {proposal.category}
+                            </Badge>
+                          </div>
                           <Badge variant="outline" className="border-blue-400/50 text-blue-300 text-xs">
-                            {proposal.daoId.toUpperCase()}
+                            {proposal.id.includes('ens') ? 'ENS' : '1INCH'}
                           </Badge>
                         </div>
                         <CardTitle className="text-white text-sm leading-tight">
@@ -179,19 +196,38 @@ const MemberProfile = () => {
                           {proposal.description}
                         </p>
                         
-                        <div className="flex flex-wrap gap-1">
-                          <Badge className="bg-green-500/20 text-green-300 text-xs">
-                            {proposal.assigneeRole}
-                          </Badge>
-                          <Badge className="bg-orange-500/20 text-orange-300 text-xs">
-                            {proposal.domain}
-                          </Badge>
+                        <div className="text-xs text-gray-400 flex items-center">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          Created: {new Date(proposal.created).toLocaleDateString()}
                         </div>
                         
-                        <div className="text-xs text-gray-400">
-                          Deadline: {new Date(proposal.deadline).toLocaleDateString()}
+                        {/* Member Assignment */}
+                        <div className="space-y-2">
+                          {proposal.assignee ? (
+                            <div className="flex items-center text-xs text-gray-400">
+                              <User className="w-3 h-3 mr-2" />
+                              Assigned to: {proposal.assignee}
+                            </div>
+                          ) : (
+                            <div>
+                              <label className="block text-xs text-gray-300 mb-1">Assign Member</label>
+                              <Select onValueChange={(value) => handleAssignMember(proposal.id, value)}>
+                                <SelectTrigger className="h-7 text-xs bg-white/10 border-white/20 text-white">
+                                  <SelectValue placeholder="Select member" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-slate-800 border-white/20 z-50">
+                                  {mockMembers.map((member) => (
+                                    <SelectItem key={member.id} value={member.name} className="text-white hover:bg-white/10">
+                                      {member.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                         </div>
                         
+                        {/* Status Change Button */}
                         <div className="flex gap-2">
                           {status !== 'done' && (
                             <Button
