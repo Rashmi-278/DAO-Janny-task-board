@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,26 @@ import { Link } from 'react-router-dom';
 
 const mockDAOs = [
   {
+    id: '1inch',
+    name: '1inch DAO',
+    description: 'Decentralized exchange aggregator governance',
+    members: 28000,
+    activeProposals: 6,
+    treasuryValue: '$125M',
+    category: 'Protocol DAO',
+    logo: '🌀'
+  },
+  {
+    id: 'ens',
+    name: 'ENS DAO',
+    description: 'Ethereum Name Service governance and management',
+    members: 18500,
+    activeProposals: 9,
+    treasuryValue: '$78M',
+    category: 'Protocol DAO',
+    logo: '📛'
+  },
+  {
     id: 'uniswap',
     name: 'Uniswap DAO',
     description: 'Decentralized exchange protocol governance',
@@ -16,36 +35,6 @@ const mockDAOs = [
     treasuryValue: '$2.1B',
     category: 'Protocol DAO',
     logo: '🦄'
-  },
-  {
-    id: 'aave',
-    name: 'Aave DAO',
-    description: 'Decentralized lending protocol governance',
-    members: 32000,
-    activeProposals: 8,
-    treasuryValue: '$890M',
-    category: 'Protocol DAO',
-    logo: '👻'
-  },
-  {
-    id: 'gitcoin',
-    name: 'Gitcoin DAO',
-    description: 'Public goods funding and developer ecosystem',
-    members: 15000,
-    activeProposals: 15,
-    treasuryValue: '$45M',
-    category: 'Grant DAO',
-    logo: '🌱'
-  },
-  {
-    id: 'nouns',
-    name: 'Nouns DAO',
-    description: 'NFT collective focused on funding public goods',
-    members: 8500,
-    activeProposals: 23,
-    treasuryValue: '$67M',
-    category: 'Collector DAO',
-    logo: '⌐◨-◨'
   }
 ];
 
