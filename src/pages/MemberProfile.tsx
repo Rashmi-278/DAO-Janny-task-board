@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Bell, CheckCircle, Clock, AlertCircle, User, Calendar } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { fetchDAOProposals, type Proposal } from '@/lib/proposalService';
+import { NotificationCenter } from '@/components/NotificationCenter';
+import { notificationService } from '@/lib/notificationService';
+import { blockscoutService } from '@/lib/blockscoutService';
+import { Toaster } from '@/components/ui/sonner';
 
 const statusConfig = {
   todo: { label: 'To Do', color: 'bg-gray-500/20 text-gray-300', icon: Clock },
@@ -59,6 +62,19 @@ const MemberProfile = () => {
   }, [isConnected, navigate]);
 
   useEffect(() => {
+    // Initialize Blockscout SDK when component mounts
+    if (address) {
+      blockscoutService.initialize({
+        network: 'optimism-sepolia',
+        baseUrl: 'https://optimism-sepolia.blockscout.com'
+      });
+
+      // Start monitoring the user's address
+      blockscoutService.watchAddress(address);
+    }
+  }, [address]);
+
+  useEffect(() => {
     const loadProposals = async () => {
       setLoading(true);
       try {
@@ -91,17 +107,37 @@ const MemberProfile = () => {
   }, []);
 
   const handleStatusChange = (proposalId: string, newStatus: string) => {
-    setProposals(prev => 
-      prev.map(p => p.id === proposalId ? { ...p, taskStatus: newStatus as any } : p)
-    );
-    console.log(`Status changed for ${proposalId} to ${newStatus}`);
+    const proposal = proposals.find(p => p.id === proposalId);
+    if (proposal) {
+      const oldStatus = proposal.taskStatus;
+      
+      setProposals(prev => 
+        prev.map(p => p.id === proposalId ? { ...p, taskStatus: newStatus as any } : p)
+      );
+      
+      // Send notification
+      notificationService.notifyStatusChange(
+        proposal.title,
+        statusConfig[oldStatus].label,
+        statusConfig[newStatus as keyof typeof statusConfig].label
+      );
+      
+      console.log(`Status changed for ${proposalId} to ${newStatus}`);
+    }
   };
 
   const handleAssignMember = (proposalId: string, memberName: string) => {
-    setProposals(prev => 
-      prev.map(p => p.id === proposalId ? { ...p, assignee: memberName } : p)
-    );
-    console.log(`Assigned ${memberName} to proposal ${proposalId}`);
+    const proposal = proposals.find(p => p.id === proposalId);
+    if (proposal) {
+      setProposals(prev => 
+        prev.map(p => p.id === proposalId ? { ...p, assignee: memberName } : p)
+      );
+      
+      // Send notification
+      notificationService.notifyTaskAssignment(proposal.title, memberName);
+      
+      console.log(`Assigned ${memberName} to proposal ${proposalId}`);
+    }
   };
 
   const groupedProposals = {
@@ -149,6 +185,10 @@ const MemberProfile = () => {
               <p className="text-gray-400 text-sm mt-1">
                 Total proposals: {proposals.length}
               </p>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <NotificationCenter />
             </div>
           </div>
         </div>
@@ -261,6 +301,8 @@ const MemberProfile = () => {
           })}
         </div>
       </main>
+      
+      <Toaster />
     </div>
   );
 };
