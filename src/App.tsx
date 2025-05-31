@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import ProposalCategorization from "./pages/ProposalCategorization";
+import MemberRoleAllocation from "./pages/MemberRoleAllocation";
 import DAOKanbanBoard from "./pages/DAOKanbanBoard";
 import NotFound from "./pages/NotFound";
 import { Web3Provider } from "./lib/Web3Provider";
@@ -22,7 +22,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/dao/:daoId" element={<ProposalCategorization />} />
+          <Route path="/dao/:daoId" element={<MemberRoleAllocation />} />
           <Route path="/dao/:daoId/board" element={<DAOKanbanBoard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -5,74 +5,68 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Users } from 'lucide-react';
 import { Header } from '@/components/Header';
-import { fetchDAOProposals, type Proposal } from '@/lib/proposalService';
+import { fetchDAOMembers, type Member } from '@/lib/memberService';
 import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 
-const categories = [
-  { value: 'governance', label: 'Governance', color: 'bg-purple-500/20 text-purple-300' },
-  { value: 'treasury', label: 'Treasury', color: 'bg-blue-500/20 text-blue-300' },
-  { value: 'technical', label: 'Technical', color: 'bg-cyan-500/20 text-cyan-300' },
-  { value: 'community', label: 'Community', color: 'bg-pink-500/20 text-pink-300' },
-  { value: 'grants', label: 'Grants', color: 'bg-green-500/20 text-green-300' },
-  { value: 'operations', label: 'Operations', color: 'bg-orange-500/20 text-orange-300' }
+const roles = [
+  { value: 'reviewer', label: 'Reviewer', color: 'bg-purple-500/20 text-purple-300' },
+  { value: 'executor', label: 'Executor', color: 'bg-blue-500/20 text-blue-300' },
+  { value: 'analyst', label: 'Analyst', color: 'bg-cyan-500/20 text-cyan-300' },
+  { value: 'coordinator', label: 'Coordinator', color: 'bg-pink-500/20 text-pink-300' },
+  { value: 'unassigned', label: 'Unassigned', color: 'bg-gray-500/20 text-gray-300' }
 ];
 
-const statusColors = {
-  onchain: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  closed: 'bg-red-500/20 text-red-300 border-red-500/30',
-  approved: 'bg-green-500/20 text-green-300 border-green-500/30'
-};
-
-const ProposalCategorization = () => {
+const MemberRoleAllocation = () => {
   const { daoId } = useParams();
   const navigate = useNavigate();
-  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categorizedProposals, setCategorizedProposals] = useState<Record<string, string>>({});
+  const [memberRoles, setMemberRoles] = useState<Record<string, string>>({});
   const [processingComplete, setProcessingComplete] = useState(false);
 
   useEffect(() => {
-    const loadProposals = async () => {
+    const loadMembers = async () => {
       if (!daoId) return;
       
       setLoading(true);
       try {
-        const fetchedProposals = await fetchDAOProposals(daoId);
-        setProposals(fetchedProposals);
+        const fetchedMembers = await fetchDAOMembers(daoId);
+        setMembers(fetchedMembers);
         
-        // Initialize with automatic categorization
-        const initialCategories: Record<string, string> = {};
-        fetchedProposals.forEach(proposal => {
-          initialCategories[proposal.id] = proposal.category;
+        // Initialize with default roles
+        const initialRoles: Record<string, string> = {};
+        fetchedMembers.forEach(member => {
+          initialRoles[member.id] = member.role || 'unassigned';
         });
-        setCategorizedProposals(initialCategories);
+        setMemberRoles(initialRoles);
         
       } catch (error) {
-        console.error('Failed to load proposals:', error);
+        console.error('Failed to load members:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadProposals();
+    loadMembers();
   }, [daoId]);
 
-  const handleCategoryChange = async (proposalId: string, newCategory: string) => {
-    setCategorizedProposals(prev => ({
+  const handleRoleChange = async (memberId: string, newRole: string) => {
+    setMemberRoles(prev => ({
       ...prev,
-      [proposalId]: newCategory
+      [memberId]: newRole
     }));
 
-    // Generate metadata for categorization change
+    // Generate metadata for role assignment
     const metadata = generateTaskMetadata({
-      action: 'proposal_categorization',
-      taskId: proposalId,
+      action: 'delegate_opt_in',
+      taskId: memberId,
       timestamp: new Date().toISOString(),
+      delegateAddress: members.find(m => m.id === memberId)?.address,
       taskDetails: {
-        proposalId,
-        newCategory,
+        memberId,
+        newRole,
         daoId
       }
     });
@@ -80,22 +74,22 @@ const ProposalCategorization = () => {
     try {
       await saveToFilecoin(metadata);
     } catch (error) {
-      console.error('Failed to save categorization metadata:', error);
+      console.error('Failed to save role assignment metadata:', error);
     }
   };
 
   const handleProceedToKanban = async () => {
     setProcessingComplete(true);
 
-    // Generate metadata for categorization completion
+    // Generate metadata for role allocation completion
     const metadata = generateTaskMetadata({
-      action: 'categorization_complete',
-      taskId: `${daoId}-categorization-complete`,
+      action: 'random_assignment',
+      taskId: `${daoId}-role-allocation-complete`,
       timestamp: new Date().toISOString(),
       taskDetails: {
         daoId,
-        totalProposals: proposals.length,
-        categorizedProposals: categorizedProposals
+        totalMembers: members.length,
+        roleAllocations: memberRoles
       }
     });
 
@@ -119,7 +113,7 @@ const ProposalCategorization = () => {
         <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center py-12">
-            <div className="text-white">Loading proposals...</div>
+            <div className="text-white">Loading members...</div>
           </div>
         </main>
       </div>
@@ -143,7 +137,7 @@ const ProposalCategorization = () => {
           <div className="flex items-center justify-between mb-2">
             <div>
               <h1 className="text-3xl font-bold text-white capitalize">{daoId} DAO</h1>
-              <p className="text-gray-300">Review and categorize proposals before execution board</p>
+              <p className="text-gray-300">Assign roles to DAO members before proposal execution board</p>
             </div>
             
             <Button 
@@ -167,47 +161,48 @@ const ProposalCategorization = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {proposals.map((proposal) => (
-            <Card key={proposal.id} className="backdrop-blur-lg bg-white/10 border-white/20 hover:bg-white/15 transition-all duration-300">
+          {members.map((member) => (
+            <Card key={member.id} className="backdrop-blur-lg bg-white/10 border-white/20 hover:bg-white/15 transition-all duration-300">
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between mb-3">
-                  <Badge className={statusColors[proposal.status as keyof typeof statusColors]}>
-                    {proposal.status}
+                  <Badge className={roles.find(r => r.value === memberRoles[member.id])?.color || 'bg-gray-500/20 text-gray-300'}>
+                    {roles.find(r => r.value === memberRoles[member.id])?.label || 'Unassigned'}
                   </Badge>
-                  <Badge className={categories.find(c => c.value === categorizedProposals[proposal.id])?.color || 'bg-gray-500/20 text-gray-300'}>
-                    {categories.find(c => c.value === categorizedProposals[proposal.id])?.label || 'Uncategorized'}
-                  </Badge>
+                  <div className="flex items-center text-gray-400 text-xs">
+                    <Users className="w-3 h-3 mr-1" />
+                    {member.votingWeight || 0}
+                  </div>
                 </div>
                 <CardTitle className="text-white text-lg leading-tight">
-                  {proposal.title}
+                  {member.name}
                 </CardTitle>
-                <p className="text-gray-300 text-sm">{proposal.description}</p>
+                <p className="text-gray-300 text-sm font-mono">
+                  {member.address.slice(0, 6)}...{member.address.slice(-4)}
+                </p>
               </CardHeader>
 
               <CardContent className="space-y-4">
-                <div className="text-xs text-gray-400">
-                  <div>Author: {proposal.author}</div>
-                  <div>Created: {new Date(proposal.created).toLocaleDateString()}</div>
-                  {proposal.deadline && (
-                    <div>Deadline: {new Date(proposal.deadline).toLocaleDateString()}</div>
-                  )}
+                <div className="text-xs text-gray-400 space-y-1">
+                  <div>Delegated Votes: {member.delegatedVotes?.toLocaleString() || 0}</div>
+                  <div>Voting Weight: {member.votingWeight?.toLocaleString() || 0}</div>
+                  <div>Proposals Created: {member.proposalsCreated || 0}</div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Category (DAOIP-4)
+                    Assign Role
                   </label>
                   <Select
-                    value={categorizedProposals[proposal.id] || ''}
-                    onValueChange={(value) => handleCategoryChange(proposal.id, value)}
+                    value={memberRoles[member.id] || 'unassigned'}
+                    onValueChange={(value) => handleRoleChange(member.id, value)}
                   >
                     <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-800 border-white/20">
-                      {categories.map((category) => (
-                        <SelectItem key={category.value} value={category.value} className="text-white hover:bg-white/10">
-                          {category.label}
+                      {roles.map((role) => (
+                        <SelectItem key={role.value} value={role.value} className="text-white hover:bg-white/10">
+                          {role.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -218,9 +213,9 @@ const ProposalCategorization = () => {
           ))}
         </div>
 
-        {proposals.length === 0 && (
+        {members.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-400">No proposals found for this DAO.</p>
+            <p className="text-gray-400">No members found for this DAO.</p>
           </div>
         )}
       </main>
@@ -228,4 +223,4 @@ const ProposalCategorization = () => {
   );
 };
 
-export default ProposalCategorization;
+export default MemberRoleAllocation;
