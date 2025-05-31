@@ -9,7 +9,7 @@ const mockProposals = {
       title: 'DAO Constitution Update',
       description: 'Update governance documentation and communication channels',
       assignee: null,
-      priority: 'high',
+      priority: 'high' as const,
       deadline: '2024-06-15',
       type: 'governance'
     },
@@ -18,7 +18,7 @@ const mockProposals = {
       title: 'Treasury Diversification',
       description: 'Execute approved treasury management strategy',
       assignee: null,
-      priority: 'medium',
+      priority: 'medium' as const,
       deadline: '2024-06-20',
       type: 'treasury'
     }
@@ -29,7 +29,7 @@ const mockProposals = {
       title: 'Community Events Planning',
       description: 'Organize Q2 community meetups and workshops',
       assignee: 'vitalik.eth',
-      priority: 'medium',
+      priority: 'medium' as const,
       deadline: '2024-06-10',
       type: 'community'
     }
@@ -40,7 +40,7 @@ const mockProposals = {
       title: 'Protocol Upgrade Implementation',
       description: 'Deploy approved smart contract improvements',
       assignee: 'developer.eth',
-      priority: 'high',
+      priority: 'high' as const,
       deadline: '2024-05-30',
       type: 'technical'
     }
