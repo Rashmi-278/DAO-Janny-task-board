@@ -29,6 +29,15 @@ export const ProposalBoard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Demo member addresses for pre-assignment
+  const demoAssignees = [
+    'alice.eth',
+    'bob.eth', 
+    'charlie.eth',
+    'diana.eth',
+    'eve.eth'
+  ];
+
   useEffect(() => {
     console.log('ProposalBoard: useEffect triggered, daoId:', daoId);
     
@@ -75,16 +84,39 @@ export const ProposalBoard = () => {
           return;
         }
         
-        // Distribute proposals across columns
+        // Better distribution for demo purposes
         const shuffled = [...validProposals].sort(() => 0.5 - Math.random());
-        const quarterSize = Math.ceil(shuffled.length / 4);
+        
+        // Distribute with more emphasis on backlog and in-progress for demo
+        const totalCount = shuffled.length;
+        const backlogCount = Math.ceil(totalCount * 0.4); // 40% in backlog
+        const inProgressCount = Math.ceil(totalCount * 0.3); // 30% in progress
+        const reviewCount = Math.ceil(totalCount * 0.2); // 20% in review
+        const doneCount = totalCount - backlogCount - inProgressCount - reviewCount; // remainder in done
         
         const groupedProposals: ProposalsByStatus = {
-          backlog: shuffled.slice(0, quarterSize),
-          inProgress: shuffled.slice(quarterSize, quarterSize * 2),
-          review: shuffled.slice(quarterSize * 2, quarterSize * 3),
-          done: shuffled.slice(quarterSize * 3)
+          backlog: shuffled.slice(0, backlogCount),
+          inProgress: shuffled.slice(backlogCount, backlogCount + inProgressCount),
+          review: shuffled.slice(backlogCount + inProgressCount, backlogCount + inProgressCount + reviewCount),
+          done: shuffled.slice(backlogCount + inProgressCount + reviewCount)
         };
+        
+        // Pre-assign members to some proposals for demo purposes
+        // Assign to all "done" proposals and some "in progress" ones
+        groupedProposals.done.forEach((proposal, index) => {
+          if (index < demoAssignees.length) {
+            (proposal as any).assignee = demoAssignees[index];
+          } else {
+            (proposal as any).assignee = demoAssignees[index % demoAssignees.length];
+          }
+        });
+        
+        // Assign to half of the "in progress" proposals
+        groupedProposals.inProgress.forEach((proposal, index) => {
+          if (index % 2 === 0 && index < demoAssignees.length) {
+            (proposal as any).assignee = demoAssignees[index];
+          }
+        });
         
         console.log('ProposalBoard: Grouped proposals:', groupedProposals);
         console.log('ProposalBoard: About to set state...');
@@ -137,7 +169,7 @@ export const ProposalBoard = () => {
   const handleTaskUpdate = async (taskId: string, updates: any) => {
     console.log('ProposalBoard: Task update:', taskId, updates);
     
-    if (updates.assignee) {
+    if (updates.assignee !== undefined) {
       setProposals(prev => {
         const newProposals = { ...prev };
         for (const status in newProposals) {
