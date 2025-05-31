@@ -1,13 +1,17 @@
 
 import React from 'react';
-import { Waves, Wallet } from 'lucide-react';
+import { Waves, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConnectKitButton } from "connectkit";
+import { useAccount } from 'wagmi';
+import { useNavigate } from 'react-router-dom';
 
 export const Header = () => {
-  const handleConnectWallet = () => {
-    console.log('Connecting wallet...');
-    // Add wallet connection logic here
+  const { address, isConnected } = useAccount();
+  const navigate = useNavigate();
+
+  const handleProfileClick = () => {
+    navigate('/profile');
   };
 
   return (
@@ -24,6 +28,16 @@ export const Header = () => {
         </div>
 
         <div className="flex items-center space-x-4">
+          {isConnected && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleProfileClick}
+              className="border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+            >
+              <User className="w-4 h-4" />
+            </Button>
+          )}
           <ConnectKitButton />
         </div>
       </div>
