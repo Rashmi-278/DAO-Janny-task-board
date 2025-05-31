@@ -14,7 +14,11 @@ interface ProposalsByStatus {
 }
 
 export const ProposalBoard = () => {
+  console.log('ProposalBoard: Component rendering started');
+  
   const { daoId } = useParams();
+  console.log('ProposalBoard: daoId from params:', daoId);
+  
   const [proposals, setProposals] = useState<ProposalsByStatus>({
     backlog: [],
     inProgress: [],
@@ -26,8 +30,11 @@ export const ProposalBoard = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('ProposalBoard: useEffect triggered, daoId:', daoId);
+    
     const loadData = async () => {
       if (!daoId) {
+        console.log('ProposalBoard: No DAO ID provided');
         setError('No DAO ID provided');
         setLoading(false);
         return;
@@ -37,30 +44,35 @@ export const ProposalBoard = () => {
       setError(null);
       
       try {
-        console.log('Loading data for DAO:', daoId);
+        console.log('ProposalBoard: Starting to load data for DAO:', daoId);
         
         const [fetchedProposals, fetchedMembers] = await Promise.all([
           fetchDAOProposals(daoId),
           fetchDAOMembers(daoId)
         ]);
         
-        console.log('Fetched proposals:', fetchedProposals);
-        console.log('Fetched members:', fetchedMembers);
+        console.log('ProposalBoard: Fetched proposals:', fetchedProposals);
+        console.log('ProposalBoard: Fetched members:', fetchedMembers);
         
-        if (!fetchedProposals || fetchedProposals.length === 0) {
-          console.log('No proposals found for DAO:', daoId);
+        // Ensure we have arrays
+        const validProposals = Array.isArray(fetchedProposals) ? fetchedProposals : [];
+        const validMembers = Array.isArray(fetchedMembers) ? fetchedMembers : [];
+        
+        if (validProposals.length === 0) {
+          console.log('ProposalBoard: No proposals found, setting empty state');
           setProposals({
             backlog: [],
             inProgress: [],
             review: [],
             done: []
           });
-          setMembers(fetchedMembers || []);
+          setMembers(validMembers);
           setLoading(false);
           return;
         }
         
-        const shuffled = [...fetchedProposals].sort(() => 0.5 - Math.random());
+        // Distribute proposals across columns
+        const shuffled = [...validProposals].sort(() => 0.5 - Math.random());
         const quarterSize = Math.ceil(shuffled.length / 4);
         
         const groupedProposals: ProposalsByStatus = {
@@ -70,31 +82,40 @@ export const ProposalBoard = () => {
           done: shuffled.slice(quarterSize * 3)
         };
         
+        console.log('ProposalBoard: Grouped proposals:', groupedProposals);
+        
         setProposals(groupedProposals);
-        setMembers(fetchedMembers || []);
+        setMembers(validMembers);
         
-        const metadata = generateTaskMetadata({
-          action: 'task_creation',
-          taskId: `${daoId}-proposals-fetch`,
-          timestamp: new Date().toISOString(),
-          taskDetails: {
-            daoId,
-            proposalCounts: {
-              backlog: groupedProposals.backlog.length,
-              inProgress: groupedProposals.inProgress.length,
-              review: groupedProposals.review.length,
-              done: groupedProposals.done.length
+        // Save metadata
+        try {
+          const metadata = generateTaskMetadata({
+            action: 'task_creation',
+            taskId: `${daoId}-proposals-fetch`,
+            timestamp: new Date().toISOString(),
+            taskDetails: {
+              daoId,
+              proposalCounts: {
+                backlog: groupedProposals.backlog.length,
+                inProgress: groupedProposals.inProgress.length,
+                review: groupedProposals.review.length,
+                done: groupedProposals.done.length
+              }
             }
-          }
-        });
-        
-        await saveToFilecoin(metadata);
+          });
+          
+          await saveToFilecoin(metadata);
+        } catch (metadataError) {
+          console.error('ProposalBoard: Failed to save metadata:', metadataError);
+          // Don't let metadata errors break the UI
+        }
         
       } catch (error) {
-        console.error('Failed to load data:', error);
-        setError('Failed to load proposals and members');
+        console.error('ProposalBoard: Failed to load data:', error);
+        setError(`Failed to load proposals and members: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setLoading(false);
+        console.log('ProposalBoard: Loading completed');
       }
     };
 
@@ -102,7 +123,7 @@ export const ProposalBoard = () => {
   }, [daoId]);
 
   const handleTaskUpdate = async (taskId: string, updates: any) => {
-    console.log('Proposal update:', taskId, updates);
+    console.log('ProposalBoard: Task update:', taskId, updates);
     
     if (updates.assignee) {
       setProposals(prev => {
@@ -119,7 +140,7 @@ export const ProposalBoard = () => {
     
     try {
       const metadata = generateTaskMetadata({
-        action: 'task_creation',
+        action: 'task_update',
         taskId,
         timestamp: new Date().toISOString(),
         taskDetails: { taskId, updates }
@@ -127,11 +148,14 @@ export const ProposalBoard = () => {
 
       await saveToFilecoin(metadata);
     } catch (error) {
-      console.error('Failed to save proposal update metadata:', error);
+      console.error('ProposalBoard: Failed to save proposal update metadata:', error);
     }
   };
 
+  console.log('ProposalBoard: Current state - loading:', loading, 'error:', error, 'proposals:', proposals);
+
   if (loading) {
+    console.log('ProposalBoard: Rendering loading state');
     return (
       <div>
         <h2 className="text-3xl font-bold text-white mb-6">Proposal Execution Board</h2>
@@ -143,6 +167,7 @@ export const ProposalBoard = () => {
   }
 
   if (error) {
+    console.log('ProposalBoard: Rendering error state:', error);
     return (
       <div>
         <h2 className="text-3xl font-bold text-white mb-6">Proposal Execution Board</h2>
@@ -152,6 +177,8 @@ export const ProposalBoard = () => {
       </div>
     );
   }
+
+  console.log('ProposalBoard: Rendering main board with proposals:', proposals);
 
   return (
     <div>
@@ -163,13 +190,13 @@ export const ProposalBoard = () => {
         <TaskColumn 
           title="Backlog" 
           tasks={proposals.backlog.map(p => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
+            id: p.id || `backlog-${Math.random()}`,
+            title: p.title || 'Untitled Proposal',
+            description: p.description || 'No description available',
             assignee: (p as any).assignee || null,
             priority: 'medium' as const,
             deadline: p.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            type: p.category,
+            type: p.category || 'operations',
             allowsOptIn: true,
             allowsRandomAssignment: false,
             members: members
@@ -182,13 +209,13 @@ export const ProposalBoard = () => {
         <TaskColumn 
           title="In Progress" 
           tasks={proposals.inProgress.map(p => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
+            id: p.id || `progress-${Math.random()}`,
+            title: p.title || 'Untitled Proposal',
+            description: p.description || 'No description available',
             assignee: (p as any).assignee || null,
             priority: 'high' as const,
             deadline: p.deadline || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-            type: p.category,
+            type: p.category || 'operations',
             allowsOptIn: true,
             allowsRandomAssignment: true,
             members: members
@@ -201,13 +228,13 @@ export const ProposalBoard = () => {
         <TaskColumn 
           title="Review" 
           tasks={proposals.review.map(p => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
+            id: p.id || `review-${Math.random()}`,
+            title: p.title || 'Untitled Proposal',
+            description: p.description || 'No description available',
             assignee: (p as any).assignee || null,
             priority: 'medium' as const,
-            deadline: p.deadline || p.created,
-            type: p.category,
+            deadline: p.deadline || p.created || new Date().toISOString(),
+            type: p.category || 'operations',
             allowsOptIn: false,
             allowsRandomAssignment: false,
             members: members
@@ -220,13 +247,13 @@ export const ProposalBoard = () => {
         <TaskColumn 
           title="Done" 
           tasks={proposals.done.map(p => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
+            id: p.id || `done-${Math.random()}`,
+            title: p.title || 'Untitled Proposal',
+            description: p.description || 'No description available',
             assignee: (p as any).assignee || null,
             priority: 'low' as const,
-            deadline: p.deadline || p.created,
-            type: p.category,
+            deadline: p.deadline || p.created || new Date().toISOString(),
+            type: p.category || 'operations',
             allowsOptIn: false,
             allowsRandomAssignment: false,
             members: members

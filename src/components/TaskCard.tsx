@@ -43,86 +43,118 @@ const typeColors = {
 };
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members = [] }) => {
+  console.log('TaskCard: Rendering with task:', task);
+  
   const [isOptingIn, setIsOptingIn] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
   if (!task) {
-    console.log('TaskCard: task is null or undefined');
-    return null;
+    console.error('TaskCard: task is null or undefined');
+    return (
+      <Card className="backdrop-blur-lg bg-white/10 border-white/20">
+        <CardContent className="p-4">
+          <p className="text-gray-400 text-sm">Invalid task data</p>
+        </CardContent>
+      </Card>
+    );
   }
 
+  const safeTask = {
+    id: task.id || `task-${Math.random()}`,
+    title: task.title || 'Untitled Task',
+    description: task.description || 'No description available',
+    assignee: task.assignee || null,
+    priority: task.priority || 'medium',
+    deadline: task.deadline || new Date().toISOString(),
+    type: task.type || 'operations',
+    allowsOptIn: task.allowsOptIn || false,
+    allowsRandomAssignment: task.allowsRandomAssignment || false
+  };
+
   const handleOptIn = async () => {
+    console.log('TaskCard: Opt in clicked for task:', safeTask.id);
     setIsOptingIn(true);
     
     try {
       const metadata = generateTaskMetadata({
         action: 'delegate_opt_in',
-        taskId: task.id,
+        taskId: safeTask.id,
         timestamp: new Date().toISOString(),
         delegateAddress: 'user.eth',
-        taskDetails: task
+        taskDetails: safeTask
       });
 
       await saveToFilecoin(metadata);
-      onTaskUpdate?.(task.id, { assignee: 'user.eth' });
+      onTaskUpdate?.(safeTask.id, { assignee: 'user.eth' });
       
-      console.log('Delegate opted in successfully:', metadata);
+      console.log('TaskCard: Delegate opted in successfully:', metadata);
     } catch (error) {
-      console.error('Failed to opt in:', error);
+      console.error('TaskCard: Failed to opt in:', error);
     } finally {
       setIsOptingIn(false);
     }
   };
 
   const handleRandomAssignment = async () => {
+    console.log('TaskCard: Random assignment clicked for task:', safeTask.id);
     setIsAssigning(true);
     
     try {
-      const availableMembers = members.length > 0 
-        ? members.map(m => m.address)
+      const availableMembers = members && members.length > 0 
+        ? members.map(m => m.address).filter(Boolean)
         : ['alice.eth', 'bob.eth', 'charlie.eth', 'diana.eth'];
       
       const randomMember = availableMembers[Math.floor(Math.random() * availableMembers.length)];
       
       const metadata = generateTaskMetadata({
         action: 'random_assignment',
-        taskId: task.id,
+        taskId: safeTask.id,
         timestamp: new Date().toISOString(),
         assignedDelegate: randomMember,
-        taskDetails: task,
+        taskDetails: safeTask,
         randomnessSource: 'pyth_entropy'
       });
 
       await saveToFilecoin(metadata);
-      onTaskUpdate?.(task.id, { assignee: randomMember });
+      onTaskUpdate?.(safeTask.id, { assignee: randomMember });
       
-      console.log('Random assignment completed:', metadata);
+      console.log('TaskCard: Random assignment completed:', metadata);
     } catch (error) {
-      console.error('Failed to assign randomly:', error);
+      console.error('TaskCard: Failed to assign randomly:', error);
     } finally {
       setIsAssigning(false);
     }
   };
 
   const handleMemberAssignment = async (memberId: string) => {
+    console.log('TaskCard: Member assignment for task:', safeTask.id, 'member:', memberId);
+    
+    if (!memberId) {
+      onTaskUpdate?.(safeTask.id, { assignee: null });
+      return;
+    }
+    
     const selectedMember = members.find(m => m.id === memberId);
-    if (!selectedMember) return;
+    if (!selectedMember) {
+      console.error('TaskCard: Selected member not found:', memberId);
+      return;
+    }
 
     try {
       const metadata = generateTaskMetadata({
-        action: 'delegate_opt_in',
-        taskId: task.id,
+        action: 'delegate_assignment',
+        taskId: safeTask.id,
         timestamp: new Date().toISOString(),
         delegateAddress: selectedMember.address,
-        taskDetails: { ...task, assignedMember: selectedMember }
+        taskDetails: { ...safeTask, assignedMember: selectedMember }
       });
 
       await saveToFilecoin(metadata);
-      onTaskUpdate?.(task.id, { assignee: selectedMember.address });
+      onTaskUpdate?.(safeTask.id, { assignee: selectedMember.address });
       
-      console.log('Member assigned successfully:', metadata);
+      console.log('TaskCard: Member assigned successfully:', metadata);
     } catch (error) {
-      console.error('Failed to assign member:', error);
+      console.error('TaskCard: Failed to assign member:', error);
     }
   };
 
@@ -131,7 +163,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <CardTitle className="text-white text-sm font-medium leading-tight line-clamp-2">
-            {task.title || 'Untitled Task'}
+            {safeTask.title}
           </CardTitle>
           <Button 
             variant="ghost" 
@@ -143,33 +175,33 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
         </div>
         
         <div className="flex items-center space-x-2 flex-wrap gap-1">
-          <Badge className={priorityColors[task.priority] || priorityColors.medium}>
-            {task.priority || 'medium'}
+          <Badge className={priorityColors[safeTask.priority as keyof typeof priorityColors] || priorityColors.medium}>
+            {safeTask.priority}
           </Badge>
-          <Badge className={typeColors[task.type as keyof typeof typeColors] || 'bg-gray-500/20 text-gray-300'}>
-            {task.type || 'operations'}
+          <Badge className={typeColors[safeTask.type as keyof typeof typeColors] || 'bg-gray-500/20 text-gray-300'}>
+            {safeTask.type}
           </Badge>
         </div>
       </CardHeader>
       
       <CardContent className="space-y-4">
         <p className="text-gray-300 text-xs leading-relaxed line-clamp-3">
-          {task.description || 'No description available'}
+          {safeTask.description}
         </p>
         
         <div className="space-y-3">
           <div className="flex items-center text-xs text-gray-400">
             <Calendar className="w-3 h-3 mr-2 flex-shrink-0" />
             <span className="truncate">
-              Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
+              Due: {new Date(safeTask.deadline).toLocaleDateString()}
             </span>
           </div>
           
-          {members.length > 0 && (
+          {members && members.length > 0 && (
             <div className="space-y-2">
               <label className="text-xs text-gray-400">Assign Member:</label>
               <Select
-                value={task.assignee || ""}
+                value={safeTask.assignee || ""}
                 onValueChange={handleMemberAssignment}
               >
                 <SelectTrigger className="h-7 text-xs bg-white/10 border-white/20 text-white">
@@ -186,9 +218,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
                       className="text-white hover:bg-white/10"
                     >
                       <div className="flex flex-col">
-                        <span className="truncate">{member.name}</span>
+                        <span className="truncate">{member.name || 'Unknown'}</span>
                         <span className="text-xs text-gray-400 truncate">
-                          {member.address.slice(0, 6)}...{member.address.slice(-4)}
+                          {member.address ? `${member.address.slice(0, 6)}...${member.address.slice(-4)}` : 'No address'}
                         </span>
                       </div>
                     </SelectItem>
@@ -198,16 +230,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             </div>
           )}
           
-          {task.assignee && (
+          {safeTask.assignee && (
             <div className="flex items-center text-xs text-gray-400">
               <User className="w-3 h-3 mr-2 flex-shrink-0" />
-              <span className="truncate">{task.assignee}</span>
+              <span className="truncate">{safeTask.assignee}</span>
             </div>
           )}
           
-          {!task.assignee && (
+          {!safeTask.assignee && (
             <div className="flex items-center space-x-2">
-              {task.allowsOptIn && (
+              {safeTask.allowsOptIn && (
                 <Button 
                   size="sm" 
                   variant="outline"
@@ -221,18 +253,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
                     <UserPlus className="w-3 h-3 mr-1" />
                   )}
                   {isOptingIn ? 'Opting...' : 'Opt In'}
-                </Button>
-              )}
-              {task.allowsRandomAssignment && (
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={handleRandomAssignment}
-                  disabled={isAssigning}
-                  className="text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
-                >
-                  <Dice6 className="w-3 h-3 mr-1" />
-                  {isAssigning ? 'Assigning...' : 'Random'}
                 </Button>
               )}
             </div>
