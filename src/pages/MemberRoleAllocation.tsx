@@ -198,7 +198,7 @@ const MemberRoleAllocation = () => {
           <Button 
             variant="outline" 
             onClick={() => navigate('/')}
-            className="border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30 mb-4"
+            className="bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30 mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to DAO List
@@ -206,7 +206,7 @@ const MemberRoleAllocation = () => {
           
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-white capitalize">{daoId} DAO</h1>
+              <h1 className="text-3xl font-bold text-white capitalize">{daoId.toUpperCase()} DAO</h1>
               <p className="text-gray-300">Assign roles and domains to DAO members before proposal execution board</p>
               <p className="text-gray-400 text-sm mt-1">
                 Total members: {members.length} | Filtered: {filteredMembers.length} | Assigned: {assignedCount}
@@ -249,7 +249,7 @@ const MemberRoleAllocation = () => {
               onClick={() => setShowAssignedOnly(!showAssignedOnly)}
               className={showAssignedOnly 
                 ? "bg-blue-600 text-white" 
-                : "border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+                : "bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
               }
             >
               {showAssignedOnly ? "Show All" : "Show Assigned Only"}

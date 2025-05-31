@@ -8,15 +8,7 @@ import { Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
 
 const mockDAOs = [
-  {
-    id: '1inch',
-    name: '1inch DAO',
-    description: 'Decentralized exchange aggregator governance',
-    members: '27',
-    treasuryValue: '$125M',
-    category: 'Protocol DAO',
-    apiUrl: 'https://proposalsuri.daostar.org/proposals/1inch.eth'
-  },
+
   {
     id: 'ens',
     name: 'ENS DAO',
@@ -25,7 +17,17 @@ const mockDAOs = [
     treasuryValue: '$78M',
     category: 'Protocol DAO',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/ens.eth?onchain=ens'
+  },
+  {
+    id: '1inch',
+    name: '1inch DAO',
+    description: 'Decentralized exchange aggregator governance',
+    members: '27',
+    treasuryValue: '$125M',
+    category: 'Protocol DAO',
+    apiUrl: 'https://proposalsuri.daostar.org/proposals/1inch.eth'
   }
+
 ];
 
 const categoryColors = {
@@ -39,10 +41,10 @@ const DAOList = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-white mb-2">Select a DAO</h2>
+          <h2 className="text-3xl font-bold text-white mb-2">Explore a DAO</h2>
           <p className="text-gray-300">Choose a DAO to view their proposal execution board</p>
         </div>
 
@@ -74,7 +76,7 @@ const DAOList = () => {
                 <Link to={`/dao/${dao.id}`}>
                   <Button className="w-full mt-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0">
                     <Shield className="w-4 h-4 mr-2" />
-                    View Proposal Task Board
+                    Explore Task Board
                   </Button>
                 </Link>
               </CardContent>

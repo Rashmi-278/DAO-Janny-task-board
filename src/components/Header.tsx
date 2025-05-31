@@ -33,7 +33,7 @@ export const Header = () => {
               variant="outline"
               size="icon"
               onClick={handleProfileClick}
-              className="border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+              className="bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
             >
               <User className="w-4 h-4" />
             </Button>

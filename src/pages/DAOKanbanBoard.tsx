@@ -15,7 +15,7 @@ const DAOKanbanBoard = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <Link to="/">
-            <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30 mb-4">
+            <Button variant="outline" className="bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30 mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to DAO List
             </Button>
