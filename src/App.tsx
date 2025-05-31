@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { NotificationProvider, TransactionPopupProvider } from "@blockscout/app-sdk";
 import Index from "./pages/Index";
 import MemberRoleAllocation from "./pages/MemberRoleAllocation";
 import DAOKanbanBoard from "./pages/DAOKanbanBoard";
@@ -17,23 +16,19 @@ const queryClient = new QueryClient();
 const App = () => (
   <Web3Provider>
     <QueryClientProvider client={queryClient}>
-      <NotificationProvider>
-        <TransactionPopupProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/dao/:daoId" element={<MemberRoleAllocation />} />
-                <Route path="/dao/:daoId/board" element={<DAOKanbanBoard />} />
-                <Route path="/profile" element={<MemberProfile />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </TransactionPopupProvider>
-      </NotificationProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/dao/:daoId" element={<MemberRoleAllocation />} />
+            <Route path="/dao/:daoId/board" element={<DAOKanbanBoard />} />
+            <Route path="/profile" element={<MemberProfile />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
     </QueryClientProvider>
   </Web3Provider>
 );

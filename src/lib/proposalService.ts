@@ -62,11 +62,13 @@ export async function fetchDAOProposals(daoId: string): Promise<Proposal[]> {
     
     if (data.proposals && Array.isArray(data.proposals)) {
       proposals = data.proposals;
+    } else if (data.proposals && data.proposals.offchain && Array.isArray(data.proposals.offchain)) {
+      proposals = data.proposals.offchain;
     } else if (Array.isArray(data)) {
       proposals = data;
     }
     
-    // Filter and transform proposals
+    // Filter and transform proposals - ONLY include closed proposals
     const filteredProposals = proposals
       .filter((proposal: any) => {
         const status = proposal.status?.toLowerCase() || proposal.state?.toLowerCase() || '';
@@ -75,21 +77,12 @@ export async function fetchDAOProposals(daoId: string): Promise<Proposal[]> {
       .map((proposal: any, index: number): Proposal => {
         const title = proposal.title || proposal.name || `Proposal ${index + 1}`;
         const description = proposal.description || proposal.summary || proposal.body || '';
-        const status = proposal.status?.toLowerCase() || proposal.state?.toLowerCase() || 'onchain';
-        
-        // Map various status values to our expected statuses
-        let mappedStatus: 'onchain' | 'closed' | 'approved' = 'onchain'
-        if (status === 'closed' || status === 'defeated' || status === 'expired') {
-          mappedStatus = 'closed';
-        } else if (status === 'approved' || status === 'executed' || status === 'succeeded') {
-          mappedStatus = 'approved';
-        }
         
         return {
           id: proposal.id || proposal.proposal_id || `${daoId}-${index}`,
           title,
           description: description.slice(0, 200) + (description.length > 200 ? '...' : ''),
-          status: mappedStatus,
+          status: 'closed', // All filtered proposals are closed
           category: categorizeProposal(title, description) as any,
           author: proposal.author || proposal.proposer || 'Unknown',
           created: proposal.created || proposal.start_date || new Date().toISOString(),
@@ -103,7 +96,7 @@ export async function fetchDAOProposals(daoId: string): Promise<Proposal[]> {
         };
       });
     
-    console.log(`Processed ${filteredProposals.length} proposals for ${daoId}:`, filteredProposals);
+    console.log(`Processed ${filteredProposals.length} closed proposals for ${daoId}:`, filteredProposals);
     
     return filteredProposals;
     
