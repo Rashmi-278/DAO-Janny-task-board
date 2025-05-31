@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Vote, TrendingUp, Shield } from 'lucide-react';
+import { Users, TrendingUp, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
 
@@ -12,10 +13,8 @@ const mockDAOs = [
     name: '1inch DAO',
     description: 'Decentralized exchange aggregator governance',
     members: 28000,
-    activeProposals: 6,
     treasuryValue: '$125M',
     category: 'Protocol DAO',
-    logo: '🌀',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/1inch.eth'
   },
   {
@@ -23,10 +22,8 @@ const mockDAOs = [
     name: 'ENS DAO',
     description: 'Ethereum Name Service governance and management',
     members: 18500,
-    activeProposals: 9,
     treasuryValue: '$78M',
     category: 'Protocol DAO',
-    logo: '📛',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/ens.eth?onchain=ens'
   }
 ];
@@ -54,7 +51,6 @@ const DAOList = () => {
             <Card key={dao.id} className="backdrop-blur-lg bg-white/10 border-white/20 hover:bg-white/15 transition-all duration-300 group">
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="text-3xl">{dao.logo}</div>
                   <Badge className={categoryColors[dao.category as keyof typeof categoryColors]}>
                     {dao.category}
                   </Badge>
@@ -68,10 +64,6 @@ const DAOList = () => {
                   <div className="flex items-center text-gray-400">
                     <Users className="w-4 h-4 mr-2" />
                     {dao.members.toLocaleString()} members
-                  </div>
-                  <div className="flex items-center text-gray-400">
-                    <Vote className="w-4 h-4 mr-2" />
-                    {dao.activeProposals} active
                   </div>
                   <div className="flex items-center text-gray-400 col-span-2">
                     <TrendingUp className="w-4 h-4 mr-2" />
@@ -93,7 +85,6 @@ const DAOList = () => {
         <div className="mt-12 text-center">
           <Card className="backdrop-blur-lg bg-white/5 border-white/10 border-dashed max-w-md mx-auto">
             <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
-              <div className="text-4xl">➕</div>
               <h3 className="text-white font-semibold">Add Your DAO</h3>
               <p className="text-gray-400 text-sm text-center">
                 Connect your DAO to start tracking proposal execution

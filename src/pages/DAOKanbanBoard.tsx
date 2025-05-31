@@ -14,10 +14,10 @@ const DAOKanbanBoard = () => {
       <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link to={`/dao/${daoId}`}>
+          <Link to="/">
             <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30 mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Categorization
+              Back to DAO List
             </Button>
           </Link>
           <div className="flex items-center space-x-3 mb-2">

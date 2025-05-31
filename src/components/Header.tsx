@@ -4,6 +4,11 @@ import { Waves, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const Header = () => {
+  const handleConnectWallet = () => {
+    console.log('Connecting wallet...');
+    // Add wallet connection logic here
+  };
+
   return (
     <header className="backdrop-blur-lg bg-white/10 border-b border-white/20 sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -21,6 +26,7 @@ export const Header = () => {
           <Button 
             variant="outline" 
             className="border-white/20 text-white hover:bg-white/10 backdrop-blur-sm"
+            onClick={handleConnectWallet}
           >
             <Wallet className="w-4 h-4 mr-2" />
             Connect Wallet
