@@ -12,7 +12,7 @@ const mockDAOs = [
     id: '1inch',
     name: '1inch DAO',
     description: 'Decentralized exchange aggregator governance',
-    members: 27,
+    members: '27',
     treasuryValue: '$125M',
     category: 'Protocol DAO',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/1inch.eth'
@@ -20,8 +20,8 @@ const mockDAOs = [
   {
     id: 'ens',
     name: 'ENS DAO',
-    description: 'Ethereum Name Service governance and management',
-    members: 36080, // Fixed: changed from 'delagates' to 'members' and converted to number
+    description: 'Ethernet Name Service governance and management',
+    members: '36.08K',
     treasuryValue: '$78M',
     category: 'Protocol DAO',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/ens.eth?onchain=ens'
@@ -63,7 +63,7 @@ const DAOList = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center text-gray-400">
                     <Users className="w-4 h-4 mr-2" />
-                    {dao.members.toLocaleString()} members
+                    {dao.members} members
                   </div>
                   <div className="flex items-center text-gray-400 col-span-2">
                     <TrendingUp className="w-4 h-4 mr-2" />
