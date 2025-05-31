@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +73,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
 
   // Hide member assignment dropdown for done tasks or tasks that already have an assignee
   const shouldShowMemberAssignment = status !== 'done' && !safeTask.assignee && members && members.length > 0;
+
+  // Hide random assignment button for done tasks
+  const shouldShowRandomAssignment = status !== 'done';
 
   const handleOptIn = async () => {
     console.log('TaskCard: Opt in clicked for task:', safeTask.id);
@@ -262,18 +264,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             </div>
           )}
           
-          <div className="pt-2 border-t border-white/10">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={handleRandomAssignment}
-              disabled={isAssigning}
-              className="w-full text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
-            >
-              <Dice6 className="w-3 h-3 mr-1" />
-              {isAssigning ? 'Randomly Assigning...' : 'Random Assignment'}
-            </Button>
-          </div>
+          {shouldShowRandomAssignment && (
+            <div className="pt-2 border-t border-white/10">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={handleRandomAssignment}
+                disabled={isAssigning}
+                className="w-full text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+              >
+                <Dice6 className="w-3 h-3 mr-1" />
+                {isAssigning ? 'Randomly Assigning...' : 'Random Assignment'}
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
