@@ -129,7 +129,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
   const handleMemberAssignment = async (memberId: string) => {
     console.log('TaskCard: Member assignment for task:', safeTask.id, 'member:', memberId);
     
-    if (!memberId) {
+    if (!memberId || memberId === "unassigned") {
       onTaskUpdate?.(safeTask.id, { assignee: null });
       return;
     }
@@ -201,14 +201,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             <div className="space-y-2">
               <label className="text-xs text-gray-400">Assign Member:</label>
               <Select
-                value={safeTask.assignee || ""}
+                value={safeTask.assignee || "unassigned"}
                 onValueChange={handleMemberAssignment}
               >
                 <SelectTrigger className="h-7 text-xs bg-white/10 border-white/20 text-white">
                   <SelectValue placeholder="Select member" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-800 border-white/20 z-50">
-                  <SelectItem value="" className="text-white hover:bg-white/10">
+                  <SelectItem value="unassigned" className="text-white hover:bg-white/10">
                     Unassigned
                   </SelectItem>
                   {members.slice(0, 10).map((member) => (
