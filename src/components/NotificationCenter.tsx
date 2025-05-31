@@ -47,7 +47,7 @@ export const NotificationCenter: React.FC = () => {
         variant="outline"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+        className="relative bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
       >
         {unreadCount > 0 ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
         {unreadCount > 0 && (

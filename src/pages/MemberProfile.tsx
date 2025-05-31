@@ -401,10 +401,7 @@ const MemberProfile = () => {
                           </span>
                         </div>
                         
-                        <div className="flex items-center text-xs text-green-400">
-                          <User className="w-3 h-3 mr-2 shrink-0" />
-                          <span className="truncate">Assigned to you</span>
-                        </div>
+                    
                         
                         {/* Status Change Button */}
                         <div className="flex gap-2">

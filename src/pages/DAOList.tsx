@@ -14,7 +14,7 @@ const mockDAOs = [
     name: 'ENS DAO',
     description: 'Ethernet Name Service governance and management',
     members: '36.08K',
-    treasuryValue: '$78M',
+    treasuryValue: '$200M',
     category: 'Protocol DAO',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/ens.eth?onchain=ens'
   },
@@ -23,7 +23,7 @@ const mockDAOs = [
     name: '1inch DAO',
     description: 'Decentralized exchange aggregator governance',
     members: '27',
-    treasuryValue: '$125M',
+    treasuryValue: '$16M',
     category: 'Protocol DAO',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/1inch.eth'
   }

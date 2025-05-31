@@ -21,7 +21,7 @@ const DAOKanbanBoard = () => {
             </Button>
           </Link>
           <div className="flex items-center space-x-3 mb-2">
-            <h1 className="text-3xl font-bold text-white capitalize">{daoId} DAO</h1>
+            <h1 className="text-3xl font-bold text-white capitalize">{daoId.toUpperCase()} DAO</h1>
           </div>
           <p className="text-gray-300">Proposal execution board with DAOIP-4 categorization</p>
         </div>
