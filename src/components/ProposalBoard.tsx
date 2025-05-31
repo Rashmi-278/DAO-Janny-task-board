@@ -33,18 +33,19 @@ export const ProposalBoard = () => {
     console.log('ProposalBoard: useEffect triggered, daoId:', daoId);
     
     const loadData = async () => {
-      if (!daoId) {
-        console.log('ProposalBoard: No DAO ID provided');
-        setError('No DAO ID provided');
-        setLoading(false);
-        return;
-      }
-      
-      setLoading(true);
-      setError(null);
-      
       try {
-        console.log('ProposalBoard: Starting to load data for DAO:', daoId);
+        console.log('ProposalBoard: Starting loadData function');
+        
+        if (!daoId) {
+          console.log('ProposalBoard: No DAO ID provided');
+          setError('No DAO ID provided');
+          setLoading(false);
+          return;
+        }
+        
+        setLoading(true);
+        setError(null);
+        console.log('ProposalBoard: Set loading to true, starting data fetch for DAO:', daoId);
         
         const [fetchedProposals, fetchedMembers] = await Promise.all([
           fetchDAOProposals(daoId),
@@ -57,6 +58,9 @@ export const ProposalBoard = () => {
         // Ensure we have arrays
         const validProposals = Array.isArray(fetchedProposals) ? fetchedProposals : [];
         const validMembers = Array.isArray(fetchedMembers) ? fetchedMembers : [];
+        
+        console.log('ProposalBoard: Valid proposals length:', validProposals.length);
+        console.log('ProposalBoard: Valid members length:', validMembers.length);
         
         if (validProposals.length === 0) {
           console.log('ProposalBoard: No proposals found, setting empty state');
@@ -83,9 +87,12 @@ export const ProposalBoard = () => {
         };
         
         console.log('ProposalBoard: Grouped proposals:', groupedProposals);
+        console.log('ProposalBoard: About to set state...');
         
         setProposals(groupedProposals);
         setMembers(validMembers);
+        
+        console.log('ProposalBoard: State set successfully, attempting to save metadata...');
         
         // Save metadata
         try {
@@ -105,6 +112,7 @@ export const ProposalBoard = () => {
           });
           
           await saveToFilecoin(metadata);
+          console.log('ProposalBoard: Metadata saved successfully');
         } catch (metadataError) {
           console.error('ProposalBoard: Failed to save metadata:', metadataError);
           // Don't let metadata errors break the UI
@@ -114,12 +122,16 @@ export const ProposalBoard = () => {
         console.error('ProposalBoard: Failed to load data:', error);
         setError(`Failed to load proposals and members: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
+        console.log('ProposalBoard: Setting loading to false');
         setLoading(false);
-        console.log('ProposalBoard: Loading completed');
       }
     };
 
-    loadData();
+    loadData().catch(err => {
+      console.error('ProposalBoard: Uncaught error in loadData:', err);
+      setError(`Uncaught error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setLoading(false);
+    });
   }, [daoId]);
 
   const handleTaskUpdate = async (taskId: string, updates: any) => {
@@ -152,7 +164,7 @@ export const ProposalBoard = () => {
     }
   };
 
-  console.log('ProposalBoard: Current state - loading:', loading, 'error:', error, 'proposals:', proposals);
+  console.log('ProposalBoard: About to render, current state - loading:', loading, 'error:', error, 'proposals length:', Object.values(proposals).flat().length);
 
   if (loading) {
     console.log('ProposalBoard: Rendering loading state');
@@ -180,90 +192,102 @@ export const ProposalBoard = () => {
 
   console.log('ProposalBoard: Rendering main board with proposals:', proposals);
 
-  return (
-    <div>
-      <h2 className="text-3xl font-bold text-white mb-6">Proposal Execution Board</h2>
-      <p className="text-gray-300 mb-6">
-        Manage proposal execution workflow. All proposals shown are closed (voting period ended).
-      </p>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <TaskColumn 
-          title="Backlog" 
-          tasks={proposals.backlog.map(p => ({
-            id: p.id || `backlog-${Math.random()}`,
-            title: p.title || 'Untitled Proposal',
-            description: p.description || 'No description available',
-            assignee: (p as any).assignee || null,
-            priority: 'medium' as const,
-            deadline: p.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            type: p.category || 'operations',
-            allowsOptIn: true,
-            allowsRandomAssignment: false,
-            members: members
-          }))} 
-          status="backlog"
-          color="from-gray-500 to-gray-600"
-          onTaskUpdate={handleTaskUpdate}
-          members={members}
-        />
-        <TaskColumn 
-          title="In Progress" 
-          tasks={proposals.inProgress.map(p => ({
-            id: p.id || `progress-${Math.random()}`,
-            title: p.title || 'Untitled Proposal',
-            description: p.description || 'No description available',
-            assignee: (p as any).assignee || null,
-            priority: 'high' as const,
-            deadline: p.deadline || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-            type: p.category || 'operations',
-            allowsOptIn: true,
-            allowsRandomAssignment: true,
-            members: members
-          }))} 
-          status="inProgress"
-          color="from-blue-500 to-blue-600"
-          onTaskUpdate={handleTaskUpdate}
-          members={members}
-        />
-        <TaskColumn 
-          title="Review" 
-          tasks={proposals.review.map(p => ({
-            id: p.id || `review-${Math.random()}`,
-            title: p.title || 'Untitled Proposal',
-            description: p.description || 'No description available',
-            assignee: (p as any).assignee || null,
-            priority: 'medium' as const,
-            deadline: p.deadline || p.created || new Date().toISOString(),
-            type: p.category || 'operations',
-            allowsOptIn: false,
-            allowsRandomAssignment: false,
-            members: members
-          }))} 
-          status="review"
-          color="from-yellow-500 to-yellow-600"
-          onTaskUpdate={handleTaskUpdate}
-          members={members}
-        />
-        <TaskColumn 
-          title="Done" 
-          tasks={proposals.done.map(p => ({
-            id: p.id || `done-${Math.random()}`,
-            title: p.title || 'Untitled Proposal',
-            description: p.description || 'No description available',
-            assignee: (p as any).assignee || null,
-            priority: 'low' as const,
-            deadline: p.deadline || p.created || new Date().toISOString(),
-            type: p.category || 'operations',
-            allowsOptIn: false,
-            allowsRandomAssignment: false,
-            members: members
-          }))} 
-          status="done"
-          color="from-green-500 to-green-600"
-          onTaskUpdate={handleTaskUpdate}
-          members={members}
-        />
+  try {
+    return (
+      <div>
+        <h2 className="text-3xl font-bold text-white mb-6">Proposal Execution Board</h2>
+        <p className="text-gray-300 mb-6">
+          Manage proposal execution workflow. All proposals shown are closed (voting period ended).
+        </p>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <TaskColumn 
+            title="Backlog" 
+            tasks={proposals.backlog.map(p => ({
+              id: p.id || `backlog-${Math.random()}`,
+              title: p.title || 'Untitled Proposal',
+              description: p.description || 'No description available',
+              assignee: (p as any).assignee || null,
+              priority: 'medium' as const,
+              deadline: p.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              type: p.category || 'operations',
+              allowsOptIn: true,
+              allowsRandomAssignment: false,
+              members: members
+            }))} 
+            status="backlog"
+            color="from-gray-500 to-gray-600"
+            onTaskUpdate={handleTaskUpdate}
+            members={members}
+          />
+          <TaskColumn 
+            title="In Progress" 
+            tasks={proposals.inProgress.map(p => ({
+              id: p.id || `progress-${Math.random()}`,
+              title: p.title || 'Untitled Proposal',
+              description: p.description || 'No description available',
+              assignee: (p as any).assignee || null,
+              priority: 'high' as const,
+              deadline: p.deadline || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+              type: p.category || 'operations',
+              allowsOptIn: true,
+              allowsRandomAssignment: true,
+              members: members
+            }))} 
+            status="inProgress"
+            color="from-blue-500 to-blue-600"
+            onTaskUpdate={handleTaskUpdate}
+            members={members}
+          />
+          <TaskColumn 
+            title="Review" 
+            tasks={proposals.review.map(p => ({
+              id: p.id || `review-${Math.random()}`,
+              title: p.title || 'Untitled Proposal',
+              description: p.description || 'No description available',
+              assignee: (p as any).assignee || null,
+              priority: 'medium' as const,
+              deadline: p.deadline || p.created || new Date().toISOString(),
+              type: p.category || 'operations',
+              allowsOptIn: false,
+              allowsRandomAssignment: false,
+              members: members
+            }))} 
+            status="review"
+            color="from-yellow-500 to-yellow-600"
+            onTaskUpdate={handleTaskUpdate}
+            members={members}
+          />
+          <TaskColumn 
+            title="Done" 
+            tasks={proposals.done.map(p => ({
+              id: p.id || `done-${Math.random()}`,
+              title: p.title || 'Untitled Proposal',
+              description: p.description || 'No description available',
+              assignee: (p as any).assignee || null,
+              priority: 'low' as const,
+              deadline: p.deadline || p.created || new Date().toISOString(),
+              type: p.category || 'operations',
+              allowsOptIn: false,
+              allowsRandomAssignment: false,
+              members: members
+            }))} 
+            status="done"
+            color="from-green-500 to-green-600"
+            onTaskUpdate={handleTaskUpdate}
+            members={members}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  } catch (renderError) {
+    console.error('ProposalBoard: Render error:', renderError);
+    return (
+      <div>
+        <h2 className="text-3xl font-bold text-white mb-6">Proposal Execution Board</h2>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-red-400">Render Error: {renderError instanceof Error ? renderError.message : 'Unknown render error'}</div>
+        </div>
+      </div>
+    );
+  }
 };

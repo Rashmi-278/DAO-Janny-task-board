@@ -3,7 +3,7 @@ import lighthouse from '@lighthouse-web3/sdk';
 import { REACT_PUBLIC_LH_API_KEY } from './Web3Provider';
 
 interface TaskMetadata {
-  action: 'delegate_opt_in' | 'random_assignment' | 'task_creation' | 'task_completion' | 'proposal_categorization' | 'categorization_complete';
+  action: 'delegate_opt_in' | 'random_assignment' | 'task_creation' | 'task_completion' | 'proposal_categorization' | 'categorization_complete' | 'task_update' | 'delegate_assignment';
   taskId: string;
   timestamp: string;
   delegateAddress?: string;
