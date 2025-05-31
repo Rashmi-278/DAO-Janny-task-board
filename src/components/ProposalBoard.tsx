@@ -23,20 +23,43 @@ export const ProposalBoard = () => {
   });
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
-      if (!daoId) return;
+      if (!daoId) {
+        setError('No DAO ID provided');
+        setLoading(false);
+        return;
+      }
       
       setLoading(true);
+      setError(null);
+      
       try {
-        // Fetch both proposals and members
+        console.log('Loading data for DAO:', daoId);
+        
         const [fetchedProposals, fetchedMembers] = await Promise.all([
           fetchDAOProposals(daoId),
           fetchDAOMembers(daoId)
         ]);
         
-        // For MVP, distribute closed proposals across different workflow stages
+        console.log('Fetched proposals:', fetchedProposals);
+        console.log('Fetched members:', fetchedMembers);
+        
+        if (!fetchedProposals || fetchedProposals.length === 0) {
+          console.log('No proposals found for DAO:', daoId);
+          setProposals({
+            backlog: [],
+            inProgress: [],
+            review: [],
+            done: []
+          });
+          setMembers(fetchedMembers || []);
+          setLoading(false);
+          return;
+        }
+        
         const shuffled = [...fetchedProposals].sort(() => 0.5 - Math.random());
         const quarterSize = Math.ceil(shuffled.length / 4);
         
@@ -48,9 +71,8 @@ export const ProposalBoard = () => {
         };
         
         setProposals(groupedProposals);
-        setMembers(fetchedMembers);
+        setMembers(fetchedMembers || []);
         
-        // Generate metadata for proposal fetch
         const metadata = generateTaskMetadata({
           action: 'task_creation',
           taskId: `${daoId}-proposals-fetch`,
@@ -70,6 +92,7 @@ export const ProposalBoard = () => {
         
       } catch (error) {
         console.error('Failed to load data:', error);
+        setError('Failed to load proposals and members');
       } finally {
         setLoading(false);
       }
@@ -79,10 +102,8 @@ export const ProposalBoard = () => {
   }, [daoId]);
 
   const handleTaskUpdate = async (taskId: string, updates: any) => {
-    // Handle proposal updates including member assignment
     console.log('Proposal update:', taskId, updates);
     
-    // Update the proposal in state if assignee changed
     if (updates.assignee) {
       setProposals(prev => {
         const newProposals = { ...prev };
@@ -96,15 +117,14 @@ export const ProposalBoard = () => {
       });
     }
     
-    // Generate metadata for proposal update
-    const metadata = generateTaskMetadata({
-      action: 'task_creation',
-      taskId,
-      timestamp: new Date().toISOString(),
-      taskDetails: { taskId, updates }
-    });
-
     try {
+      const metadata = generateTaskMetadata({
+        action: 'task_creation',
+        taskId,
+        timestamp: new Date().toISOString(),
+        taskDetails: { taskId, updates }
+      });
+
       await saveToFilecoin(metadata);
     } catch (error) {
       console.error('Failed to save proposal update metadata:', error);
@@ -117,6 +137,17 @@ export const ProposalBoard = () => {
         <h2 className="text-3xl font-bold text-white mb-6">Proposal Execution Board</h2>
         <div className="flex items-center justify-center py-12">
           <div className="text-white">Loading proposals...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <h2 className="text-3xl font-bold text-white mb-6">Proposal Execution Board</h2>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-red-400">Error: {error}</div>
         </div>
       </div>
     );
@@ -135,7 +166,7 @@ export const ProposalBoard = () => {
             id: p.id,
             title: p.title,
             description: p.description,
-            assignee: p.author || null,
+            assignee: (p as any).assignee || null,
             priority: 'medium' as const,
             deadline: p.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             type: p.category,
@@ -154,7 +185,7 @@ export const ProposalBoard = () => {
             id: p.id,
             title: p.title,
             description: p.description,
-            assignee: p.author || null,
+            assignee: (p as any).assignee || null,
             priority: 'high' as const,
             deadline: p.deadline || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
             type: p.category,
@@ -173,7 +204,7 @@ export const ProposalBoard = () => {
             id: p.id,
             title: p.title,
             description: p.description,
-            assignee: p.author || null,
+            assignee: (p as any).assignee || null,
             priority: 'medium' as const,
             deadline: p.deadline || p.created,
             type: p.category,
@@ -192,7 +223,7 @@ export const ProposalBoard = () => {
             id: p.id,
             title: p.title,
             description: p.description,
-            assignee: p.author || null,
+            assignee: (p as any).assignee || null,
             priority: 'low' as const,
             deadline: p.deadline || p.created,
             type: p.category,

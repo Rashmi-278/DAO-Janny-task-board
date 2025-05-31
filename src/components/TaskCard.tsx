@@ -46,23 +46,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
   const [isOptingIn, setIsOptingIn] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
+  if (!task) {
+    console.log('TaskCard: task is null or undefined');
+    return null;
+  }
+
   const handleOptIn = async () => {
     setIsOptingIn(true);
     
     try {
-      // Generate metadata for opt-in action
       const metadata = generateTaskMetadata({
         action: 'delegate_opt_in',
         taskId: task.id,
         timestamp: new Date().toISOString(),
-        delegateAddress: 'user.eth', // This would come from wallet connection
+        delegateAddress: 'user.eth',
         taskDetails: task
       });
 
-      // Save metadata to Filecoin
       await saveToFilecoin(metadata);
-
-      // Update task with assignee
       onTaskUpdate?.(task.id, { assignee: 'user.eth' });
       
       console.log('Delegate opted in successfully:', metadata);
@@ -77,27 +78,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
     setIsAssigning(true);
     
     try {
-      // Use actual members if available, otherwise fallback to mock data
       const availableMembers = members.length > 0 
         ? members.map(m => m.address)
         : ['alice.eth', 'bob.eth', 'charlie.eth', 'diana.eth'];
       
       const randomMember = availableMembers[Math.floor(Math.random() * availableMembers.length)];
       
-      // Generate metadata for random assignment
       const metadata = generateTaskMetadata({
         action: 'random_assignment',
         taskId: task.id,
         timestamp: new Date().toISOString(),
         assignedDelegate: randomMember,
         taskDetails: task,
-        randomnessSource: 'pyth_entropy' // Would be actual entropy data
+        randomnessSource: 'pyth_entropy'
       });
 
-      // Save metadata to Filecoin
       await saveToFilecoin(metadata);
-
-      // Update task with random assignee
       onTaskUpdate?.(task.id, { assignee: randomMember });
       
       console.log('Random assignment completed:', metadata);
@@ -135,7 +131,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <CardTitle className="text-white text-sm font-medium leading-tight line-clamp-2">
-            {task.title}
+            {task.title || 'Untitled Task'}
           </CardTitle>
           <Button 
             variant="ghost" 
@@ -147,27 +143,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
         </div>
         
         <div className="flex items-center space-x-2 flex-wrap gap-1">
-          <Badge className={priorityColors[task.priority]}>
-            {task.priority}
+          <Badge className={priorityColors[task.priority] || priorityColors.medium}>
+            {task.priority || 'medium'}
           </Badge>
           <Badge className={typeColors[task.type as keyof typeof typeColors] || 'bg-gray-500/20 text-gray-300'}>
-            {task.type}
+            {task.type || 'operations'}
           </Badge>
         </div>
       </CardHeader>
       
       <CardContent className="space-y-4">
         <p className="text-gray-300 text-xs leading-relaxed line-clamp-3">
-          {task.description}
+          {task.description || 'No description available'}
         </p>
         
         <div className="space-y-3">
           <div className="flex items-center text-xs text-gray-400">
             <Calendar className="w-3 h-3 mr-2 flex-shrink-0" />
-            <span className="truncate">Due: {new Date(task.deadline).toLocaleDateString()}</span>
+            <span className="truncate">
+              Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
+            </span>
           </div>
           
-          {/* Member Assignment Section */}
           {members.length > 0 && (
             <div className="space-y-2">
               <label className="text-xs text-gray-400">Assign Member:</label>
@@ -201,7 +198,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             </div>
           )}
           
-          {/* Current Assignee Display */}
           {task.assignee && (
             <div className="flex items-center text-xs text-gray-400">
               <User className="w-3 h-3 mr-2 flex-shrink-0" />
@@ -209,7 +205,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             </div>
           )}
           
-          {/* Action Buttons */}
           {!task.assignee && (
             <div className="flex items-center space-x-2">
               {task.allowsOptIn && (
@@ -243,7 +238,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             </div>
           )}
           
-          {/* Random Assignment Button - Always visible */}
           <div className="pt-2 border-t border-white/10">
             <Button 
               size="sm" 
