@@ -3,8 +3,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, User, Dice6, ExternalLink, UserPlus, Check } from 'lucide-react';
 import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
+import type { Member } from '@/lib/memberService';
 
 interface Task {
   id: string;
@@ -16,11 +18,13 @@ interface Task {
   type: string;
   allowsOptIn?: boolean;
   allowsRandomAssignment?: boolean;
+  members?: Member[];
 }
 
 interface TaskCardProps {
   task: Task;
   onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
+  members?: Member[];
 }
 
 const priorityColors = {
@@ -33,10 +37,12 @@ const typeColors = {
   governance: 'bg-purple-500/20 text-purple-300',
   treasury: 'bg-blue-500/20 text-blue-300',
   community: 'bg-pink-500/20 text-pink-300',
-  technical: 'bg-cyan-500/20 text-cyan-300'
+  technical: 'bg-cyan-500/20 text-cyan-300',
+  grants: 'bg-orange-500/20 text-orange-300',
+  operations: 'bg-indigo-500/20 text-indigo-300'
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members = [] }) => {
   const [isOptingIn, setIsOptingIn] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
@@ -71,16 +77,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
     setIsAssigning(true);
     
     try {
-      // Generate random delegate (in real app, this would use Pyth Entropy API)
-      const randomDelegates = ['alice.eth', 'bob.eth', 'charlie.eth', 'diana.eth'];
-      const randomDelegate = randomDelegates[Math.floor(Math.random() * randomDelegates.length)];
+      // Use actual members if available, otherwise fallback to mock data
+      const availableMembers = members.length > 0 
+        ? members.map(m => m.address)
+        : ['alice.eth', 'bob.eth', 'charlie.eth', 'diana.eth'];
+      
+      const randomMember = availableMembers[Math.floor(Math.random() * availableMembers.length)];
       
       // Generate metadata for random assignment
       const metadata = generateTaskMetadata({
         action: 'random_assignment',
         taskId: task.id,
         timestamp: new Date().toISOString(),
-        assignedDelegate: randomDelegate,
+        assignedDelegate: randomMember,
         taskDetails: task,
         randomnessSource: 'pyth_entropy' // Would be actual entropy data
       });
@@ -89,7 +98,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
       await saveToFilecoin(metadata);
 
       // Update task with random assignee
-      onTaskUpdate?.(task.id, { assignee: randomDelegate });
+      onTaskUpdate?.(task.id, { assignee: randomMember });
       
       console.log('Random assignment completed:', metadata);
     } catch (error) {
@@ -99,23 +108,45 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
     }
   };
 
+  const handleMemberAssignment = async (memberId: string) => {
+    const selectedMember = members.find(m => m.id === memberId);
+    if (!selectedMember) return;
+
+    try {
+      const metadata = generateTaskMetadata({
+        action: 'delegate_opt_in',
+        taskId: task.id,
+        timestamp: new Date().toISOString(),
+        delegateAddress: selectedMember.address,
+        taskDetails: { ...task, assignedMember: selectedMember }
+      });
+
+      await saveToFilecoin(metadata);
+      onTaskUpdate?.(task.id, { assignee: selectedMember.address });
+      
+      console.log('Member assigned successfully:', metadata);
+    } catch (error) {
+      console.error('Failed to assign member:', error);
+    }
+  };
+
   return (
     <Card className="backdrop-blur-lg bg-white/10 border-white/20 hover:bg-white/15 transition-all duration-300 group">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <CardTitle className="text-white text-sm font-medium leading-tight">
+          <CardTitle className="text-white text-sm font-medium leading-tight line-clamp-2">
             {task.title}
           </CardTitle>
           <Button 
             variant="ghost" 
             size="sm"
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto text-gray-400 hover:text-white hover:bg-white/10"
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto text-gray-400 hover:text-white hover:bg-white/10 flex-shrink-0"
           >
             <ExternalLink className="w-3 h-3" />
           </Button>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-wrap gap-1">
           <Badge className={priorityColors[task.priority]}>
             {task.priority}
           </Badge>
@@ -126,55 +157,91 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
       </CardHeader>
       
       <CardContent className="space-y-4">
-        <p className="text-gray-300 text-xs leading-relaxed">
+        <p className="text-gray-300 text-xs leading-relaxed line-clamp-3">
           {task.description}
         </p>
         
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center text-xs text-gray-400">
-            <Calendar className="w-3 h-3 mr-2" />
-            Due: {new Date(task.deadline).toLocaleDateString()}
+            <Calendar className="w-3 h-3 mr-2 flex-shrink-0" />
+            <span className="truncate">Due: {new Date(task.deadline).toLocaleDateString()}</span>
           </div>
           
-          <div className="flex items-center justify-between">
-            {task.assignee ? (
-              <div className="flex items-center text-xs text-gray-400">
-                <User className="w-3 h-3 mr-2" />
-                {task.assignee}
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                {task.allowsOptIn && (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={handleOptIn}
-                    disabled={isOptingIn}
-                    className="text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
-                  >
-                    {isOptingIn ? (
-                      <Check className="w-3 h-3 mr-1" />
-                    ) : (
-                      <UserPlus className="w-3 h-3 mr-1" />
-                    )}
-                    {isOptingIn ? 'Opting...' : 'Opt In'}
-                  </Button>
-                )}
-                {task.allowsRandomAssignment && (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={handleRandomAssignment}
-                    disabled={isAssigning}
-                    className="text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
-                  >
-                    <Dice6 className="w-3 h-3 mr-1" />
-                    {isAssigning ? 'Assigning...' : 'Random'}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
+          {/* Member Assignment Section */}
+          {members.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-xs text-gray-400">Assign Member:</label>
+              <Select
+                value={task.assignee || ""}
+                onValueChange={handleMemberAssignment}
+              >
+                <SelectTrigger className="h-7 text-xs bg-white/10 border-white/20 text-white">
+                  <SelectValue placeholder="Select member" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-white/20 z-50">
+                  <SelectItem value="" className="text-white hover:bg-white/10">
+                    Unassigned
+                  </SelectItem>
+                  {members.slice(0, 10).map((member) => (
+                    <SelectItem 
+                      key={member.id} 
+                      value={member.id} 
+                      className="text-white hover:bg-white/10"
+                    >
+                      <div className="flex flex-col">
+                        <span className="truncate">{member.name}</span>
+                        <span className="text-xs text-gray-400 truncate">
+                          {member.address.slice(0, 6)}...{member.address.slice(-4)}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {/* Current Assignee Display */}
+          {task.assignee && (
+            <div className="flex items-center text-xs text-gray-400">
+              <User className="w-3 h-3 mr-2 flex-shrink-0" />
+              <span className="truncate">{task.assignee}</span>
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          {!task.assignee && (
+            <div className="flex items-center space-x-2">
+              {task.allowsOptIn && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={handleOptIn}
+                  disabled={isOptingIn}
+                  className="text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+                >
+                  {isOptingIn ? (
+                    <Check className="w-3 h-3 mr-1" />
+                  ) : (
+                    <UserPlus className="w-3 h-3 mr-1" />
+                  )}
+                  {isOptingIn ? 'Opting...' : 'Opt In'}
+                </Button>
+              )}
+              {task.allowsRandomAssignment && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={handleRandomAssignment}
+                  disabled={isAssigning}
+                  className="text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+                >
+                  <Dice6 className="w-3 h-3 mr-1" />
+                  {isAssigning ? 'Assigning...' : 'Random'}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

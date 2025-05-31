@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { TaskCard } from '@/components/TaskCard';
+import type { Member } from '@/lib/memberService';
 
 interface Task {
   id: string;
@@ -13,6 +14,7 @@ interface Task {
   type: string;
   allowsOptIn?: boolean;
   allowsRandomAssignment?: boolean;
+  members?: Member[];
 }
 
 interface TaskColumnProps {
@@ -21,9 +23,15 @@ interface TaskColumnProps {
   status: string;
   color: string;
   onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
+  members?: Member[];
 }
 
-export const TaskColumn: React.FC<TaskColumnProps> = ({ title, tasks, onTaskUpdate }) => {
+export const TaskColumn: React.FC<TaskColumnProps> = ({ 
+  title, 
+  tasks, 
+  onTaskUpdate, 
+  members = [] 
+}) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-3">
@@ -35,7 +43,12 @@ export const TaskColumn: React.FC<TaskColumnProps> = ({ title, tasks, onTaskUpda
       
       <div className="space-y-3">
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} onTaskUpdate={onTaskUpdate} />
+          <TaskCard 
+            key={task.id} 
+            task={task} 
+            onTaskUpdate={onTaskUpdate}
+            members={members}
+          />
         ))}
         
         {tasks.length === 0 && (

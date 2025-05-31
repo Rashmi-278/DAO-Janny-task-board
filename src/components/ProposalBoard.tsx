@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { TaskColumn } from '@/components/TaskColumn';
 import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 import { fetchDAOProposals, type Proposal } from '@/lib/proposalService';
+import { fetchDAOMembers, type Member } from '@/lib/memberService';
 
 interface ProposalsByStatus {
   backlog: Proposal[];
@@ -20,25 +21,34 @@ export const ProposalBoard = () => {
     review: [],
     done: []
   });
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadProposals = async () => {
+    const loadData = async () => {
       if (!daoId) return;
       
       setLoading(true);
       try {
-        const fetchedProposals = await fetchDAOProposals(daoId);
+        // Fetch both proposals and members
+        const [fetchedProposals, fetchedMembers] = await Promise.all([
+          fetchDAOProposals(daoId),
+          fetchDAOMembers(daoId)
+        ]);
         
-        // Group proposals by workflow status
+        // For MVP, distribute closed proposals across different workflow stages
+        const shuffled = [...fetchedProposals].sort(() => 0.5 - Math.random());
+        const quarterSize = Math.ceil(shuffled.length / 4);
+        
         const groupedProposals: ProposalsByStatus = {
-          backlog: fetchedProposals.filter(p => p.status === 'onchain'),
-          inProgress: fetchedProposals.filter(p => p.status === 'approved'),
-          review: [], // Can be populated with proposals pending review
-          done: fetchedProposals.filter(p => p.status === 'closed')
+          backlog: shuffled.slice(0, quarterSize),
+          inProgress: shuffled.slice(quarterSize, quarterSize * 2),
+          review: shuffled.slice(quarterSize * 2, quarterSize * 3),
+          done: shuffled.slice(quarterSize * 3)
         };
         
         setProposals(groupedProposals);
+        setMembers(fetchedMembers);
         
         // Generate metadata for proposal fetch
         const metadata = generateTaskMetadata({
@@ -59,18 +69,32 @@ export const ProposalBoard = () => {
         await saveToFilecoin(metadata);
         
       } catch (error) {
-        console.error('Failed to load proposals:', error);
+        console.error('Failed to load data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadProposals();
+    loadData();
   }, [daoId]);
 
   const handleTaskUpdate = async (taskId: string, updates: any) => {
-    // Handle proposal updates
+    // Handle proposal updates including member assignment
     console.log('Proposal update:', taskId, updates);
+    
+    // Update the proposal in state if assignee changed
+    if (updates.assignee) {
+      setProposals(prev => {
+        const newProposals = { ...prev };
+        for (const status in newProposals) {
+          const statusKey = status as keyof ProposalsByStatus;
+          newProposals[statusKey] = newProposals[statusKey].map(proposal => 
+            proposal.id === taskId ? { ...proposal, assignee: updates.assignee } : proposal
+          );
+        }
+        return newProposals;
+      });
+    }
     
     // Generate metadata for proposal update
     const metadata = generateTaskMetadata({
@@ -101,6 +125,9 @@ export const ProposalBoard = () => {
   return (
     <div>
       <h2 className="text-3xl font-bold text-white mb-6">Proposal Execution Board</h2>
+      <p className="text-gray-300 mb-6">
+        Manage proposal execution workflow. All proposals shown are closed (voting period ended).
+      </p>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <TaskColumn 
           title="Backlog" 
@@ -108,16 +135,18 @@ export const ProposalBoard = () => {
             id: p.id,
             title: p.title,
             description: p.description,
-            assignee: null,
+            assignee: p.author || null,
             priority: 'medium' as const,
             deadline: p.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             type: p.category,
             allowsOptIn: true,
-            allowsRandomAssignment: false
+            allowsRandomAssignment: false,
+            members: members
           }))} 
           status="backlog"
           color="from-gray-500 to-gray-600"
           onTaskUpdate={handleTaskUpdate}
+          members={members}
         />
         <TaskColumn 
           title="In Progress" 
@@ -125,16 +154,18 @@ export const ProposalBoard = () => {
             id: p.id,
             title: p.title,
             description: p.description,
-            assignee: null,
+            assignee: p.author || null,
             priority: 'high' as const,
             deadline: p.deadline || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
             type: p.category,
             allowsOptIn: true,
-            allowsRandomAssignment: true
+            allowsRandomAssignment: true,
+            members: members
           }))} 
           status="inProgress"
           color="from-blue-500 to-blue-600"
           onTaskUpdate={handleTaskUpdate}
+          members={members}
         />
         <TaskColumn 
           title="Review" 
@@ -142,16 +173,18 @@ export const ProposalBoard = () => {
             id: p.id,
             title: p.title,
             description: p.description,
-            assignee: p.author,
+            assignee: p.author || null,
             priority: 'medium' as const,
             deadline: p.deadline || p.created,
             type: p.category,
             allowsOptIn: false,
-            allowsRandomAssignment: false
+            allowsRandomAssignment: false,
+            members: members
           }))} 
           status="review"
           color="from-yellow-500 to-yellow-600"
           onTaskUpdate={handleTaskUpdate}
+          members={members}
         />
         <TaskColumn 
           title="Done" 
@@ -159,16 +192,18 @@ export const ProposalBoard = () => {
             id: p.id,
             title: p.title,
             description: p.description,
-            assignee: p.author,
+            assignee: p.author || null,
             priority: 'low' as const,
             deadline: p.deadline || p.created,
             type: p.category,
             allowsOptIn: false,
-            allowsRandomAssignment: false
+            allowsRandomAssignment: false,
+            members: members
           }))} 
           status="done"
           color="from-green-500 to-green-600"
           onTaskUpdate={handleTaskUpdate}
+          members={members}
         />
       </div>
     </div>
