@@ -46,7 +46,6 @@ interface TaskProposal extends Proposal {
 interface UserProfile {
   ensRole?: Member;
   inchRole?: Member;
-  totalVotes: number;
   activeDAOs: string[];
 }
 
@@ -120,11 +119,7 @@ const MemberProfile = () => {
         const profile: UserProfile = {
           ensRole,
           inchRole,
-          totalVotes: (ensRole?.delegatedVotes || 0) + (inchRole?.delegatedVotes || 0),
-          activeDAOs: [
-            ...(ensRole ? ['ENS'] : []),
-            ...(inchRole ? ['1INCH'] : [])
-          ]
+          activeDAOs: ['ENS DAO', '1INCH DAO'] // Always show both DAOs
         };
 
         setUserProfile(profile);
@@ -239,15 +234,41 @@ const MemberProfile = () => {
                           <Badge key={dao} className="bg-blue-500/20 text-blue-300">
                             {dao}
                           </Badge>
-                        )) || <span className="text-gray-400 text-sm">No active memberships</span>}
+                        ))}
                       </div>
                     </div>
                     
                     <div>
-                      <p className="text-gray-300 text-sm">Total Voting Power:</p>
-                      <p className="text-white font-semibold">
-                        {userProfile?.totalVotes.toLocaleString() || 0} votes
-                      </p>
+                      <p className="text-gray-300 text-sm mb-2">Roles:</p>
+                      <div className="space-y-2">
+                        {userProfile?.ensRole && (
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-purple-500/20 text-purple-300 text-xs">
+                              ENS: {userProfile.ensRole.role || 'Member'}
+                            </Badge>
+                            {userProfile.ensRole.domain && userProfile.ensRole.domain !== 'unassigned' && (
+                              <Badge className="bg-indigo-500/20 text-indigo-300 text-xs">
+                                {userProfile.ensRole.domain}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        {userProfile?.inchRole && (
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-orange-500/20 text-orange-300 text-xs">
+                              1INCH: {userProfile.inchRole.role || 'Member'}
+                            </Badge>
+                            {userProfile.inchRole.domain && userProfile.inchRole.domain !== 'unassigned' && (
+                              <Badge className="bg-yellow-500/20 text-yellow-300 text-xs">
+                                {userProfile.inchRole.domain}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        {!userProfile?.ensRole && !userProfile?.inchRole && (
+                          <span className="text-gray-400 text-sm">No active roles</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -272,15 +293,18 @@ const MemberProfile = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-300 text-xs">Voting Power:</p>
+                      <p className="text-gray-300 text-xs">Role:</p>
                       <p className="text-white text-sm">
-                        {userProfile.ensRole.delegatedVotes?.toLocaleString() || 0}
+                        {userProfile.ensRole.role || 'Member'}
                       </p>
                     </div>
-                    {userProfile.ensRole.role && (
-                      <Badge className="bg-purple-500/20 text-purple-300 text-xs">
-                        {userProfile.ensRole.role}
-                      </Badge>
+                    {userProfile.ensRole.domain && userProfile.ensRole.domain !== 'unassigned' && (
+                      <div>
+                        <p className="text-gray-300 text-xs">Domain:</p>
+                        <Badge className="bg-purple-500/20 text-purple-300 text-xs">
+                          {userProfile.ensRole.domain}
+                        </Badge>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -302,15 +326,18 @@ const MemberProfile = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-300 text-xs">Voting Power:</p>
+                      <p className="text-gray-300 text-xs">Role:</p>
                       <p className="text-white text-sm">
-                        {userProfile.inchRole.delegatedVotes?.toLocaleString() || 0}
+                        {userProfile.inchRole.role || 'Member'}
                       </p>
                     </div>
-                    {userProfile.inchRole.role && (
-                      <Badge className="bg-orange-500/20 text-orange-300 text-xs">
-                        {userProfile.inchRole.role}
-                      </Badge>
+                    {userProfile.inchRole.domain && userProfile.inchRole.domain !== 'unassigned' && (
+                      <div>
+                        <p className="text-gray-300 text-xs">Domain:</p>
+                        <Badge className="bg-orange-500/20 text-orange-300 text-xs">
+                          {userProfile.inchRole.domain}
+                        </Badge>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
