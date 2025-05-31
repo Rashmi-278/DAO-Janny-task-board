@@ -1,13 +1,13 @@
 
 import React from 'react';
-import { Waves, User } from 'lucide-react';
+import { Waves, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConnectKitButton } from "connectkit";
 import { useAccount } from 'wagmi';
 import { useNavigate } from 'react-router-dom';
 
 export const Header = () => {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, isConnecting } = useAccount();
   const navigate = useNavigate();
 
   const handleProfileClick = () => {
@@ -28,14 +28,19 @@ export const Header = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          {isConnected && (
+          {(isConnected || isConnecting) && (
             <Button
               variant="outline"
               size="icon"
               onClick={handleProfileClick}
-              className="bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+              disabled={isConnecting || !isConnected}
+              className="bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30 disabled:opacity-50"
             >
-              <User className="w-4 h-4" />
+              {isConnecting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <User className="w-4 h-4" />
+              )}
             </Button>
           )}
           <ConnectKitButton />
