@@ -2,6 +2,7 @@
 import React from 'react';
 import { Waves, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConnectKitButton } from "connectkit";
 
 export const Header = () => {
   const handleConnectWallet = () => {
@@ -21,16 +22,9 @@ export const Header = () => {
             <p className="text-sm text-gray-300">DAO Proposal Execution Board</p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="outline" 
-            className="border-white/20 text-white hover:bg-white/10 backdrop-blur-sm"
-            onClick={handleConnectWallet}
-          >
-            <Wallet className="w-4 h-4 mr-2" />
-            Connect Wallet
-          </Button>
+          <ConnectKitButton />
         </div>
       </div>
     </header>

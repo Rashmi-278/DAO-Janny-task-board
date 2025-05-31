@@ -8,10 +8,13 @@ import Index from "./pages/Index";
 import ProposalCategorization from "./pages/ProposalCategorization";
 import DAOKanbanBoard from "./pages/DAOKanbanBoard";
 import NotFound from "./pages/NotFound";
-
+import { Web3Provider } from "./lib/Web3Provider";
 const queryClient = new QueryClient();
 
+
 const App = () => (
+      <Web3Provider>
+
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -26,6 +29,8 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+      </Web3Provider>
+
 );
 
 export default App;
