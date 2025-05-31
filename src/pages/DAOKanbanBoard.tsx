@@ -2,7 +2,6 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
-import { Dashboard } from '@/components/Dashboard';
 import { ProposalBoard } from '@/components/ProposalBoard';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -27,7 +26,6 @@ const DAOKanbanBoard = () => {
           <p className="text-gray-300">Proposal execution board with DAOIP-4 categorization</p>
         </div>
         
-        <Dashboard />
         <ProposalBoard />
       </main>
     </div>

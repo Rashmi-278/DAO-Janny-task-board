@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { TaskCard } from '@/components/TaskCard';
 
 interface Task {
@@ -23,11 +23,10 @@ interface TaskColumnProps {
   onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
-export const TaskColumn: React.FC<TaskColumnProps> = ({ title, tasks, status, color, onTaskUpdate }) => {
+export const TaskColumn: React.FC<TaskColumnProps> = ({ title, tasks, onTaskUpdate }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-3">
-        <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${color}`} />
         <h3 className="text-xl font-semibold text-white">{title}</h3>
         <span className="px-2 py-1 text-xs rounded-full bg-white/20 text-white">
           {tasks.length}
