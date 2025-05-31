@@ -1,4 +1,3 @@
-
 export interface Proposal {
   id: string;
   title: string;
@@ -18,24 +17,31 @@ export interface Proposal {
 
 // DAOIP-4 categorization keywords
 const categoryKeywords = {
-  governance: ['governance', 'constitution', 'voting', 'delegate', 'parameters', 'rules', 'policy'],
-  treasury: ['treasury', 'funding', 'budget', 'financial', 'allocation', 'spend', 'payment'],
-  technical: ['technical', 'upgrade', 'protocol', 'smart contract', 'implementation', 'development', 'code'],
-  community: ['community', 'event', 'marketing', 'outreach', 'education', 'communication'],
-  grants: ['grant', 'funding', 'support', 'research', 'ecosystem', 'builder'],
-  operations: ['operations', 'administrative', 'management', 'process', 'workflow']
+  governance: ['governance', 'constitution', 'voting', 'delegate', 'parameters', 'rules', 'policy', 'amendment', 'bylaws', 'charter'],
+  treasury: ['treasury', 'funding', 'budget', 'financial', 'allocation', 'spend', 'payment', 'grant', 'investment', 'funds'],
+  technical: ['technical', 'upgrade', 'protocol', 'smart contract', 'implementation', 'development', 'code', 'infrastructure', 'security'],
+  community: ['community', 'event', 'marketing', 'outreach', 'education', 'communication', 'partnership', 'collaboration'],
+  grants: ['grant', 'funding', 'support', 'research', 'ecosystem', 'builder', 'developer', 'bounty'],
+  operations: ['operations', 'administrative', 'management', 'process', 'workflow', 'coordination', 'execution']
 };
 
 function categorizeProposal(title: string, description: string): string {
   const text = `${title} ${description}`.toLowerCase();
   
+  // Score each category based on keyword matches
+  const categoryScores: Record<string, number> = {};
+  
   for (const [category, keywords] of Object.entries(categoryKeywords)) {
-    if (keywords.some(keyword => text.includes(keyword))) {
-      return category;
-    }
+    categoryScores[category] = keywords.filter(keyword => text.includes(keyword)).length;
   }
   
-  return 'operations'; // default category
+  // Find the category with the highest score
+  const bestCategory = Object.entries(categoryScores).reduce((best, current) => 
+    current[1] > best[1] ? current : best
+  )[0];
+  
+  // Return the best match or default to operations
+  return categoryScores[bestCategory] > 0 ? bestCategory : 'operations';
 }
 
 export async function fetchDAOProposals(daoId: string): Promise<Proposal[]> {

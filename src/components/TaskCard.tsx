@@ -242,6 +242,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
               )}
             </div>
           )}
+          
+          {/* Random Assignment Button - Always visible */}
+          <div className="pt-2 border-t border-white/10">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={handleRandomAssignment}
+              disabled={isAssigning}
+              className="w-full text-xs h-7 border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+            >
+              <Dice6 className="w-3 h-3 mr-1" />
+              {isAssigning ? 'Randomly Assigning...' : 'Random Assignment'}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
