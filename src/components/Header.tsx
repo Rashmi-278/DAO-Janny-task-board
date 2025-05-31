@@ -17,7 +17,7 @@ export const Header = () => {
             <Waves className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">ShoreGun</h1>
+            <h1 className="text-2xl font-bold text-white">DAO Janny</h1>
             <p className="text-sm text-gray-300">DAO Proposal Execution Board</p>
           </div>
         </div>
