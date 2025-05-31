@@ -5,9 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CheckCircle, Clock, AlertCircle, User, Calendar } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, User, Calendar, Shield, Users, TrendingUp } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { fetchDAOProposals, type Proposal } from '@/lib/proposalService';
+import { fetchDAOMembers, type Member } from '@/lib/memberService';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { notificationService } from '@/lib/notificationService';
 import { blockscoutService } from '@/lib/blockscoutService';
@@ -39,12 +40,21 @@ interface TaskProposal extends Proposal {
   taskStatus: 'todo' | 'in-progress' | 'review' | 'done';
   assignee?: string;
   priority: 'low' | 'medium' | 'high';
+  daoSource: 'ens' | '1inch';
+}
+
+interface UserProfile {
+  ensRole?: Member;
+  inchRole?: Member;
+  totalVotes: number;
+  activeDAOs: string[];
 }
 
 const MemberProfile = () => {
   const { address, isConnected } = useAccount();
   const navigate = useNavigate();
   const [proposals, setProposals] = useState<TaskProposal[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,10 +73,13 @@ const MemberProfile = () => {
         apiKey: 'b3f41bb5-ea66-403c-b270-dd9634e01f92'
       });
 
-      // Start monitoring the user's address - fix the async function issue
       const setupWatcher = async () => {
         const stopWatching = await blockscoutService.watchAddress(address, (transaction) => {
           console.log('New transaction detected:', transaction);
+          notificationService.notifyBlockscoutEvent(
+            'Transaction detected',
+            `${transaction.value} ETH transferred`
+          );
         });
         return stopWatching;
       };
@@ -77,7 +90,6 @@ const MemberProfile = () => {
         cleanupFunction = cleanup;
       });
 
-      // Cleanup on unmount
       return () => {
         if (cleanupFunction) {
           cleanupFunction();
@@ -87,37 +99,63 @@ const MemberProfile = () => {
   }, [address]);
 
   useEffect(() => {
-    const loadProposals = async () => {
+    const loadUserData = async () => {
+      if (!address) return;
+      
       setLoading(true);
       try {
-        // Fetch proposals from both DAOs
-        const [ensProposals, inchProposals] = await Promise.all([
+        // Fetch proposals and member data from both DAOs
+        const [ensProposals, inchProposals, ensMembers, inchMembers] = await Promise.all([
           fetchDAOProposals('ens'),
-          fetchDAOProposals('1inch')
+          fetchDAOProposals('1inch'),
+          fetchDAOMembers('ens'),
+          fetchDAOMembers('1inch')
         ]);
 
-        // Transform proposals to task format - filter to show only assigned tasks
-        const allProposals = [...ensProposals, ...inchProposals];
-        const taskProposals: TaskProposal[] = allProposals.map((proposal, index) => ({
-          ...proposal,
-          taskStatus: (index % 4 === 0 ? 'todo' : 
-                      index % 4 === 1 ? 'in-progress' :
-                      index % 4 === 2 ? 'review' : 'done') as 'todo' | 'in-progress' | 'review' | 'done',
-          assignee: index % 2 === 0 ? address : undefined,
-          priority: (index % 3 === 0 ? 'high' : index % 3 === 1 ? 'medium' : 'low') as 'low' | 'medium' | 'high'
-        })).filter(proposal => proposal.assignee === address);
+        // Find user roles in both DAOs
+        const ensRole = ensMembers.find(m => m.address?.toLowerCase() === address.toLowerCase());
+        const inchRole = inchMembers.find(m => m.address?.toLowerCase() === address.toLowerCase());
+
+        // Create user profile
+        const profile: UserProfile = {
+          ensRole,
+          inchRole,
+          totalVotes: (ensRole?.delegatedVotes || 0) + (inchRole?.delegatedVotes || 0),
+          activeDAOs: [
+            ...(ensRole ? ['ENS'] : []),
+            ...(inchRole ? ['1INCH'] : [])
+          ]
+        };
+
+        setUserProfile(profile);
+
+        // Transform proposals to task format - simulate assignments
+        const allProposals = [
+          ...ensProposals.map(p => ({ ...p, daoSource: 'ens' as const })),
+          ...inchProposals.map(p => ({ ...p, daoSource: '1inch' as const }))
+        ];
+
+        const taskProposals: TaskProposal[] = allProposals
+          .slice(0, 12) // Limit to first 12 proposals
+          .map((proposal, index) => ({
+            ...proposal,
+            taskStatus: (index % 4 === 0 ? 'todo' : 
+                        index % 4 === 1 ? 'in-progress' :
+                        index % 4 === 2 ? 'review' : 'done') as 'todo' | 'in-progress' | 'review' | 'done',
+            assignee: index % 3 === 0 ? address : undefined, // Assign every 3rd task to user
+            priority: (index % 3 === 0 ? 'high' : index % 3 === 1 ? 'medium' : 'low') as 'low' | 'medium' | 'high'
+          }))
+          .filter(proposal => proposal.assignee === address);
 
         setProposals(taskProposals);
       } catch (error) {
-        console.error('Failed to load proposals:', error);
+        console.error('Failed to load user data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (address) {
-      loadProposals();
-    }
+    loadUserData();
   }, [address]);
 
   const handleStatusChange = (proposalId: string, newStatus: string) => {
@@ -129,14 +167,11 @@ const MemberProfile = () => {
         prev.map(p => p.id === proposalId ? { ...p, taskStatus: newStatus as any } : p)
       );
       
-      // Send quirky notification
       notificationService.notifyStatusChange(
         proposal.title,
         statusConfig[oldStatus].label,
         statusConfig[newStatus as keyof typeof statusConfig].label
       );
-      
-      console.log(`Status changed for ${proposalId} to ${newStatus}`);
     }
   };
 
@@ -157,7 +192,7 @@ const MemberProfile = () => {
         <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center py-12">
-            <div className="text-white">Loading your assigned tasks...</div>
+            <div className="text-white">Loading your profile...</div>
           </div>
         </main>
       </div>
@@ -178,22 +213,118 @@ const MemberProfile = () => {
             Back to DAO List
           </Button>
           
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-white">My Assigned Tasks</h1>
-              <p className="text-gray-300">Address: {address?.slice(0, 6)}...{address?.slice(-4)}</p>
-              <p className="text-gray-400 text-sm mt-1">
-                Total assigned tasks: {proposals.length}
-              </p>
+          {/* User Profile Header */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="lg:col-span-2">
+              <Card className="backdrop-blur-lg bg-white/10 border-white/20">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Member Profile
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-gray-300 text-sm">Wallet Address:</p>
+                    <p className="text-white font-mono text-sm break-all">
+                      {address}
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-gray-300 text-sm mb-2">Active DAOs:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {userProfile?.activeDAOs.map(dao => (
+                          <Badge key={dao} className="bg-blue-500/20 text-blue-300">
+                            {dao}
+                          </Badge>
+                        )) || <span className="text-gray-400 text-sm">No active memberships</span>}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-300 text-sm">Total Voting Power:</p>
+                      <p className="text-white font-semibold">
+                        {userProfile?.totalVotes.toLocaleString() || 0} votes
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <NotificationCenter />
+            {/* DAO Roles */}
+            <div className="space-y-4">
+              {userProfile?.ensRole && (
+                <Card className="backdrop-blur-lg bg-white/10 border-white/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-white text-sm flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      ENS DAO Role
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div>
+                      <p className="text-gray-300 text-xs">Name:</p>
+                      <p className="text-white text-sm truncate" title={userProfile.ensRole.name}>
+                        {userProfile.ensRole.name || 'Unknown'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-300 text-xs">Voting Power:</p>
+                      <p className="text-white text-sm">
+                        {userProfile.ensRole.delegatedVotes?.toLocaleString() || 0}
+                      </p>
+                    </div>
+                    {userProfile.ensRole.role && (
+                      <Badge className="bg-purple-500/20 text-purple-300 text-xs">
+                        {userProfile.ensRole.role}
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              
+              {userProfile?.inchRole && (
+                <Card className="backdrop-blur-lg bg-white/10 border-white/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-white text-sm flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" />
+                      1INCH DAO Role
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div>
+                      <p className="text-gray-300 text-xs">Name:</p>
+                      <p className="text-white text-sm truncate" title={userProfile.inchRole.name}>
+                        {userProfile.inchRole.name || 'Unknown'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-300 text-xs">Voting Power:</p>
+                      <p className="text-white text-sm">
+                        {userProfile.inchRole.delegatedVotes?.toLocaleString() || 0}
+                      </p>
+                    </div>
+                    {userProfile.inchRole.role && (
+                      <Badge className="bg-orange-500/20 text-orange-300 text-xs">
+                        {userProfile.inchRole.role}
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              
+              <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold text-white">My Assigned Tasks</h1>
+                <NotificationCenter />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Task Status Board - Focused on User's Tasks */}
+        {/* Task Status Board */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {Object.entries(groupedProposals).map(([status, statusProposals]) => {
             const config = statusConfig[status as keyof typeof statusConfig];
@@ -222,28 +353,30 @@ const MemberProfile = () => {
                               {proposal.category}
                             </Badge>
                           </div>
-                          <Badge variant="outline" className="border-blue-400/50 text-blue-300 text-xs">
-                            {proposal.id.includes('ens') ? 'ENS' : '1INCH'}
+                          <Badge variant="outline" className="border-blue-400/50 text-blue-300 text-xs shrink-0">
+                            {proposal.daoSource.toUpperCase()}
                           </Badge>
                         </div>
-                        <CardTitle className="text-white text-sm leading-tight">
+                        <CardTitle className="text-white text-sm leading-tight line-clamp-2" title={proposal.title}>
                           {proposal.title}
                         </CardTitle>
                       </CardHeader>
                       
                       <CardContent className="space-y-3">
-                        <p className="text-gray-300 text-xs">
+                        <p className="text-gray-300 text-xs line-clamp-3" title={proposal.description}>
                           {proposal.description}
                         </p>
                         
                         <div className="text-xs text-gray-400 flex items-center">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          Created: {new Date(proposal.created).toLocaleDateString()}
+                          <Calendar className="w-3 h-3 mr-1 shrink-0" />
+                          <span className="truncate">
+                            Created: {new Date(proposal.created).toLocaleDateString()}
+                          </span>
                         </div>
                         
                         <div className="flex items-center text-xs text-green-400">
-                          <User className="w-3 h-3 mr-2" />
-                          Assigned to you
+                          <User className="w-3 h-3 mr-2 shrink-0" />
+                          <span className="truncate">Assigned to you</span>
                         </div>
                         
                         {/* Status Change Button */}
@@ -289,10 +422,11 @@ const MemberProfile = () => {
         {proposals.length === 0 && !loading && (
           <Card className="backdrop-blur-lg bg-white/10 border-white/20 mt-8">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <User className="w-12 h-12 text-gray-400 mb-4" />
+              <Users className="w-12 h-12 text-gray-400 mb-4" />
               <h3 className="text-white text-lg font-medium mb-2">No Assigned Tasks</h3>
-              <p className="text-gray-400 text-center">
-                You don't have any tasks assigned to you yet. Check back later or visit the DAO boards to see available tasks.
+              <p className="text-gray-400 text-center max-w-md">
+                You don't have any tasks assigned to you yet from ENS or 1INCH DAOs. 
+                Check back later or visit the DAO boards to see available tasks.
               </p>
             </CardContent>
           </Card>
