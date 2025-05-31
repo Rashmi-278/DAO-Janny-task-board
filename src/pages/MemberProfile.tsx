@@ -1,11 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Bell, CheckCircle, Clock, AlertCircle, User, Calendar } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, User, Calendar } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { fetchDAOProposals, type Proposal } from '@/lib/proposalService';
 import { NotificationCenter } from '@/components/NotificationCenter';
@@ -16,7 +16,7 @@ import { Toaster } from '@/components/ui/sonner';
 const statusConfig = {
   todo: { label: 'To Do', color: 'bg-gray-500/20 text-gray-300', icon: Clock },
   'in-progress': { label: 'In Progress', color: 'bg-blue-500/20 text-blue-300', icon: AlertCircle },
-  review: { label: 'Review', color: 'bg-yellow-500/20 text-yellow-300', icon: Bell },
+  review: { label: 'Review', color: 'bg-yellow-500/20 text-yellow-300', icon: AlertCircle },
   done: { label: 'Done', color: 'bg-green-500/20 text-green-300', icon: CheckCircle }
 };
 
@@ -34,14 +34,6 @@ const categoryColors = {
   grants: 'bg-orange-500/20 text-orange-300',
   operations: 'bg-gray-500/20 text-gray-300'
 };
-
-// Mock members for assignment
-const mockMembers = [
-  { id: '1', name: 'Alice Cooper', address: '0x1234...5678' },
-  { id: '2', name: 'Bob Wilson', address: '0x2345...6789' },
-  { id: '3', name: 'Charlie Brown', address: '0x3456...7890' },
-  { id: '4', name: 'Diana Prince', address: '0x4567...8901' }
-];
 
 interface TaskProposal extends Proposal {
   taskStatus: 'todo' | 'in-progress' | 'review' | 'done';
@@ -71,13 +63,26 @@ const MemberProfile = () => {
         apiKey: 'b3f41bb5-ea66-403c-b270-dd9634e01f92'
       });
 
-      // Start monitoring the user's address
-      const stopWatching = blockscoutService.watchAddress(address, (transaction) => {
-        console.log('New transaction detected:', transaction);
+      // Start monitoring the user's address - fix the async function issue
+      const setupWatcher = async () => {
+        const stopWatching = await blockscoutService.watchAddress(address, (transaction) => {
+          console.log('New transaction detected:', transaction);
+        });
+        return stopWatching;
+      };
+
+      let cleanupFunction: (() => void) | undefined;
+
+      setupWatcher().then((cleanup) => {
+        cleanupFunction = cleanup;
       });
 
       // Cleanup on unmount
-      return stopWatching;
+      return () => {
+        if (cleanupFunction) {
+          cleanupFunction();
+        }
+      };
     }
   }, [address]);
 
@@ -91,16 +96,16 @@ const MemberProfile = () => {
           fetchDAOProposals('1inch')
         ]);
 
-        // Transform proposals to task format
+        // Transform proposals to task format - filter to show only assigned tasks
         const allProposals = [...ensProposals, ...inchProposals];
         const taskProposals: TaskProposal[] = allProposals.map((proposal, index) => ({
           ...proposal,
           taskStatus: index % 4 === 0 ? 'todo' : 
                      index % 4 === 1 ? 'in-progress' :
                      index % 4 === 2 ? 'review' : 'done',
-          assignee: index % 3 === 0 ? mockMembers[index % mockMembers.length].name : undefined,
+          assignee: index % 2 === 0 ? address : undefined, // Only show tasks assigned to current user
           priority: index % 3 === 0 ? 'high' : index % 3 === 1 ? 'medium' : 'low'
-        }));
+        })).filter(proposal => proposal.assignee === address); // Filter to only assigned tasks
 
         setProposals(taskProposals);
       } catch (error) {
@@ -110,8 +115,10 @@ const MemberProfile = () => {
       }
     };
 
-    loadProposals();
-  }, []);
+    if (address) {
+      loadProposals();
+    }
+  }, [address]);
 
   const handleStatusChange = (proposalId: string, newStatus: string) => {
     const proposal = proposals.find(p => p.id === proposalId);
@@ -133,20 +140,6 @@ const MemberProfile = () => {
     }
   };
 
-  const handleAssignMember = (proposalId: string, memberName: string) => {
-    const proposal = proposals.find(p => p.id === proposalId);
-    if (proposal) {
-      setProposals(prev => 
-        prev.map(p => p.id === proposalId ? { ...p, assignee: memberName } : p)
-      );
-      
-      // Send notification
-      notificationService.notifyTaskAssignment(proposal.title, memberName);
-      
-      console.log(`Assigned ${memberName} to proposal ${proposalId}`);
-    }
-  };
-
   const groupedProposals = {
     todo: proposals.filter(p => p.taskStatus === 'todo'),
     'in-progress': proposals.filter(p => p.taskStatus === 'in-progress'),
@@ -164,7 +157,7 @@ const MemberProfile = () => {
         <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center py-12">
-            <div className="text-white">Loading proposals...</div>
+            <div className="text-white">Loading your assigned tasks...</div>
           </div>
         </main>
       </div>
@@ -187,10 +180,10 @@ const MemberProfile = () => {
           
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-white">Member Profile</h1>
+              <h1 className="text-3xl font-bold text-white">My Assigned Tasks</h1>
               <p className="text-gray-300">Address: {address?.slice(0, 6)}...{address?.slice(-4)}</p>
               <p className="text-gray-400 text-sm mt-1">
-                Total proposals: {proposals.length}
+                Total assigned tasks: {proposals.length}
               </p>
             </div>
             
@@ -200,7 +193,7 @@ const MemberProfile = () => {
           </div>
         </div>
 
-        {/* Mini Kanban Board */}
+        {/* Task Status Board - Focused on User's Tasks */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {Object.entries(groupedProposals).map(([status, statusProposals]) => {
             const config = statusConfig[status as keyof typeof statusConfig];
@@ -248,30 +241,9 @@ const MemberProfile = () => {
                           Created: {new Date(proposal.created).toLocaleDateString()}
                         </div>
                         
-                        {/* Member Assignment */}
-                        <div className="space-y-2">
-                          {proposal.assignee ? (
-                            <div className="flex items-center text-xs text-gray-400">
-                              <User className="w-3 h-3 mr-2" />
-                              Assigned to: {proposal.assignee}
-                            </div>
-                          ) : (
-                            <div>
-                              <label className="block text-xs text-gray-300 mb-1">Assign Member</label>
-                              <Select onValueChange={(value) => handleAssignMember(proposal.id, value)}>
-                                <SelectTrigger className="h-7 text-xs bg-white/10 border-white/20 text-white">
-                                  <SelectValue placeholder="Select member" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-slate-800 border-white/20 z-50">
-                                  {mockMembers.map((member) => (
-                                    <SelectItem key={member.id} value={member.name} className="text-white hover:bg-white/10">
-                                      {member.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
+                        <div className="flex items-center text-xs text-green-400">
+                          <User className="w-3 h-3 mr-2" />
+                          Assigned to you
                         </div>
                         
                         {/* Status Change Button */}
@@ -284,11 +256,17 @@ const MemberProfile = () => {
                                                  status === 'in-progress' ? 'review' : 'done';
                                 handleStatusChange(proposal.id, nextStatus);
                               }}
-                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs w-full"
                             >
-                              {status === 'todo' ? 'Start' : 
-                               status === 'in-progress' ? 'Review' : 'Complete'}
+                              {status === 'todo' ? 'Start Working' : 
+                               status === 'in-progress' ? 'Submit for Review' : 'Mark Complete'}
                             </Button>
+                          )}
+                          {status === 'done' && (
+                            <div className="flex items-center justify-center w-full py-2">
+                              <CheckCircle className="w-4 h-4 text-green-400 mr-2" />
+                              <span className="text-green-400 text-xs">Completed</span>
+                            </div>
                           )}
                         </div>
                       </CardContent>
@@ -298,7 +276,7 @@ const MemberProfile = () => {
                   {statusProposals.length === 0 && (
                     <Card className="backdrop-blur-lg bg-white/5 border-white/10 border-dashed">
                       <CardContent className="flex items-center justify-center py-8">
-                        <p className="text-gray-400 text-sm">No proposals</p>
+                        <p className="text-gray-400 text-sm">No tasks</p>
                       </CardContent>
                     </Card>
                   )}
@@ -307,6 +285,18 @@ const MemberProfile = () => {
             );
           })}
         </div>
+
+        {proposals.length === 0 && !loading && (
+          <Card className="backdrop-blur-lg bg-white/10 border-white/20 mt-8">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <User className="w-12 h-12 text-gray-400 mb-4" />
+              <h3 className="text-white text-lg font-medium mb-2">No Assigned Tasks</h3>
+              <p className="text-gray-400 text-center">
+                You don't have any tasks assigned to you yet. Check back later or visit the DAO boards to see available tasks.
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </main>
       
       <Toaster />
