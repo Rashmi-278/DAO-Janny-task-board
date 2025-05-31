@@ -12,7 +12,7 @@ const mockDAOs = [
     id: '1inch',
     name: '1inch DAO',
     description: 'Decentralized exchange aggregator governance',
-    members: 28000,
+    members: 27,
     treasuryValue: '$125M',
     category: 'Protocol DAO',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/1inch.eth'
@@ -21,7 +21,7 @@ const mockDAOs = [
     id: 'ens',
     name: 'ENS DAO',
     description: 'Ethereum Name Service governance and management',
-    members: 18500,
+    delagates: '36.08K',
     treasuryValue: '$78M',
     category: 'Protocol DAO',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/ens.eth?onchain=ens'
@@ -72,9 +72,9 @@ const DAOList = () => {
                 </div>
 
                 <Link to={`/dao/${dao.id}`}>
-                  <Button className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0">
+                  <Button className="w-full mt-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0">
                     <Shield className="w-4 h-4 mr-2" />
-                    View Execution Board
+                    View Proposal Task Board
                   </Button>
                 </Link>
               </CardContent>
@@ -89,7 +89,7 @@ const DAOList = () => {
               <p className="text-gray-400 text-sm text-center">
                 Connect your DAO to start tracking proposal execution
               </p>
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white">
+              <Button variant="outline" className="bg-white/20 text-white hover:bg-white/10 hover:text-white">
                 Request Integration
               </Button>
             </CardContent>

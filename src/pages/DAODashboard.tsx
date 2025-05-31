@@ -16,9 +16,10 @@ const DAODashboard = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <Link to="/">
-            <Button variant="outline" className="border-white/5 text-purple hover:bg-white/10 mb-4">
+            <Button variant="outline" className="bg-white/20 text-white hover:bg-white/10 hover:text-white">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to DAO List
+
             </Button>
           </Link>
           <div className="flex items-center space-x-3 mb-2">
@@ -26,7 +27,7 @@ const DAODashboard = () => {
           </div>
           <p className="text-gray-300">Proposal execution board with DAOIP-4 categorization</p>
         </div>
-        
+
         <Dashboard />
         <ProposalBoard />
       </main>

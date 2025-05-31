@@ -149,7 +149,7 @@ const ProposalCategorization = () => {
             <Button 
               onClick={handleProceedToKanban}
               disabled={processingComplete}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0"
+              className="bg-gradient-to-r from-blue-800 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0"
             >
               {processingComplete ? (
                 <>

@@ -70,8 +70,7 @@ export async function fetchDAOProposals(daoId: string): Promise<Proposal[]> {
     const filteredProposals = proposals
       .filter((proposal: any) => {
         const status = proposal.status?.toLowerCase() || proposal.state?.toLowerCase() || '';
-        return status === 'onchain' || status === 'closed' || status === 'approved' || 
-               status === 'executed' || status === 'succeeded' || status === 'active';
+        return status === 'closed'; // Only include closed proposals
       })
       .map((proposal: any, index: number): Proposal => {
         const title = proposal.title || proposal.name || `Proposal ${index + 1}`;
@@ -79,7 +78,7 @@ export async function fetchDAOProposals(daoId: string): Promise<Proposal[]> {
         const status = proposal.status?.toLowerCase() || proposal.state?.toLowerCase() || 'onchain';
         
         // Map various status values to our expected statuses
-        let mappedStatus: 'onchain' | 'closed' | 'approved' = 'onchain';
+        let mappedStatus: 'onchain' | 'closed' | 'approved' = 'onchain'
         if (status === 'closed' || status === 'defeated' || status === 'expired') {
           mappedStatus = 'closed';
         } else if (status === 'approved' || status === 'executed' || status === 'succeeded') {

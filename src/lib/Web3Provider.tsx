@@ -21,7 +21,7 @@ const config = createConfig(
     appName: "DAO Janny",
 
     // Optional App Info
-    appDescription: "Your App Description",
+    appDescription: "DAO Task Management and Proposal Execution Board",
     appUrl: "https://family.co", // your app's url
     appIcon: "https://family.co/logo.png", // your app's icon, no bigger than 1024x1024px (max. 1MB)
   }),
