@@ -21,7 +21,7 @@ const mockDAOs = [
     id: 'ens',
     name: 'ENS DAO',
     description: 'Ethereum Name Service governance and management',
-    delagates: '36.08K',
+    members: 36080, // Fixed: changed from 'delagates' to 'members' and converted to number
     treasuryValue: '$78M',
     category: 'Protocol DAO',
     apiUrl: 'https://proposalsuri.daostar.org/proposals/ens.eth?onchain=ens'
