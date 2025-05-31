@@ -4,8 +4,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ArrowRight, CheckCircle, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Users, Search } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { fetchDAOMembers, type Member } from '@/lib/memberService';
 import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
@@ -22,9 +23,11 @@ const MemberRoleAllocation = () => {
   const { daoId } = useParams();
   const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
+  const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [memberRoles, setMemberRoles] = useState<Record<string, string>>({});
   const [processingComplete, setProcessingComplete] = useState(false);
+  const [searchAddress, setSearchAddress] = useState('');
 
   useEffect(() => {
     const loadMembers = async () => {
@@ -34,6 +37,7 @@ const MemberRoleAllocation = () => {
       try {
         const fetchedMembers = await fetchDAOMembers(daoId);
         setMembers(fetchedMembers);
+        setFilteredMembers(fetchedMembers);
         
         // Initialize with default roles
         const initialRoles: Record<string, string> = {};
@@ -51,6 +55,18 @@ const MemberRoleAllocation = () => {
 
     loadMembers();
   }, [daoId]);
+
+  useEffect(() => {
+    if (searchAddress.trim() === '') {
+      setFilteredMembers(members);
+    } else {
+      const filtered = members.filter(member => 
+        member.address.toLowerCase().includes(searchAddress.toLowerCase()) ||
+        member.name?.toLowerCase().includes(searchAddress.toLowerCase())
+      );
+      setFilteredMembers(filtered);
+    }
+  }, [searchAddress, members]);
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     setMemberRoles(prev => ({
@@ -134,10 +150,11 @@ const MemberRoleAllocation = () => {
             Back to DAO List
           </Button>
           
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-white capitalize">{daoId} DAO</h1>
               <p className="text-gray-300">Assign roles to DAO members before proposal execution board</p>
+              <p className="text-gray-400 text-sm mt-1">Total members: {members.length} | Filtered: {filteredMembers.length}</p>
             </div>
             
             <Button 
@@ -158,16 +175,35 @@ const MemberRoleAllocation = () => {
               )}
             </Button>
           </div>
+
+          {/* Search Bar */}
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search by address or name..."
+              value={searchAddress}
+              onChange={(e) => setSearchAddress(e.target.value)}
+              className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {members.map((member) => (
+          {filteredMembers.map((member) => (
             <Card key={member.id} className="backdrop-blur-lg bg-white/10 border-white/20 hover:bg-white/15 transition-all duration-300">
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between mb-3">
-                  <Badge className={roles.find(r => r.value === memberRoles[member.id])?.color || 'bg-gray-500/20 text-gray-300'}>
-                    {roles.find(r => r.value === memberRoles[member.id])?.label || 'Unassigned'}
-                  </Badge>
+                  <div className="flex flex-col gap-1">
+                    <Badge className={roles.find(r => r.value === memberRoles[member.id])?.color || 'bg-gray-500/20 text-gray-300'}>
+                      {roles.find(r => r.value === memberRoles[member.id])?.label || 'Unassigned'}
+                    </Badge>
+                    {member.onchainRole && (
+                      <Badge variant="outline" className="border-yellow-400/50 text-yellow-300 text-xs">
+                        {member.onchainRole}
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-center text-gray-400 text-xs">
                     <Users className="w-3 h-3 mr-1" />
                     {member.votingWeight || 0}
@@ -186,6 +222,7 @@ const MemberRoleAllocation = () => {
                   <div>Delegated Votes: {member.delegatedVotes?.toLocaleString() || 0}</div>
                   <div>Voting Weight: {member.votingWeight?.toLocaleString() || 0}</div>
                   <div>Proposals Created: {member.proposalsCreated || 0}</div>
+                  <div>Type: {member.type || 'EthereumAddress'}</div>
                 </div>
 
                 <div>
@@ -213,9 +250,11 @@ const MemberRoleAllocation = () => {
           ))}
         </div>
 
-        {members.length === 0 && (
+        {filteredMembers.length === 0 && !loading && (
           <div className="text-center py-12">
-            <p className="text-gray-400">No members found for this DAO.</p>
+            <p className="text-gray-400">
+              {searchAddress ? 'No members found matching your search.' : 'No members found for this DAO.'}
+            </p>
           </div>
         )}
       </main>

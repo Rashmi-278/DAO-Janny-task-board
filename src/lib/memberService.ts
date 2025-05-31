@@ -7,6 +7,54 @@ export interface Member {
   votingWeight?: number;
   proposalsCreated?: number;
   role?: 'reviewer' | 'executor' | 'analyst' | 'coordinator' | 'unassigned';
+  onchainRole?: string;
+  type?: string;
+}
+
+async function fetchAllMembersWithPagination(baseUrl: string, daoId: string): Promise<any[]> {
+  let allMembers: any[] = [];
+  let cursor: string | null = null;
+  let hasMore = true;
+  
+  while (hasMore) {
+    try {
+      const url = cursor ? `${baseUrl}&cursor=${cursor}` : baseUrl;
+      console.log(`Fetching members from: ${url}`);
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.Members?.members) {
+        // For ENS, prioritize onchain members
+        if (daoId === 'ens' && data.Members.members.onchain?.members) {
+          allMembers = allMembers.concat(data.Members.members.onchain.members);
+          cursor = data.Members.members.onchain.onchain_cursor_str;
+        }
+        // Add offchain members if available
+        else if (data.Members.members.offchain?.members) {
+          allMembers = allMembers.concat(data.Members.members.offchain.members);
+          cursor = data.Members.members.offchain.offchain_cursor_str;
+        }
+        // For 1inch, use whatever structure is available
+        else if (data.Members.members.members) {
+          allMembers = allMembers.concat(data.Members.members.members);
+          cursor = null; // No cursor info available for this structure
+          hasMore = false;
+        }
+      }
+      
+      // Check if we should continue pagination
+      if (!cursor || allMembers.length >= 100) { // Limit to 100 members for performance
+        hasMore = false;
+      }
+      
+    } catch (error) {
+      console.error('Error fetching members page:', error);
+      hasMore = false;
+    }
+  }
+  
+  return allMembers;
 }
 
 export async function fetchDAOMembers(daoId: string): Promise<Member[]> {
@@ -21,34 +69,14 @@ export async function fetchDAOMembers(daoId: string): Promise<Member[]> {
       return [];
     }
 
-    console.log(`Fetching members for ${daoId} from: ${apiUrl}`);
+    console.log(`Fetching all members for ${daoId}`);
     
-    const response = await fetch(apiUrl);
-    const data = await response.json();
+    const allMembers = await fetchAllMembersWithPagination(apiUrl, daoId);
     
-    console.log(`Raw members API response for ${daoId}:`, data);
-    
-    // Process the response based on the actual API structure
-    let members = [];
-    
-    // Handle 1inch API structure: data.Members.members.offchain.members
-    if (data.Members?.members?.offchain?.members) {
-      members = data.Members.members.offchain.members;
-    }
-    // Handle ENS API structure (if different)
-    else if (data.members && Array.isArray(data.members)) {
-      members = data.members;
-    } 
-    // Fallback if data is directly an array
-    else if (Array.isArray(data)) {
-      members = data;
-    }
-    
-    console.log(`Found ${members.length} raw members`);
+    console.log(`Found ${allMembers.length} total members for ${daoId}`);
     
     // Transform members data
-    const processedMembers = members
-      .slice(0, 20) // Limit to first 20 members for UI performance
+    const processedMembers = allMembers
       .map((member: any, index: number): Member => {
         const address = member.id || member.address || `0x${index.toString().padStart(40, '0')}`;
         return {
@@ -58,11 +86,13 @@ export async function fetchDAOMembers(daoId: string): Promise<Member[]> {
           delegatedVotes: member.delegatedVotes || member.voting_weight || Math.floor(Math.random() * 1000),
           votingWeight: member.votingWeight || member.delegated_votes || Math.floor(Math.random() * 100),
           proposalsCreated: member.proposalsCreated || Math.floor(Math.random() * 10),
-          role: 'unassigned'
+          role: 'unassigned',
+          onchainRole: member.role || undefined,
+          type: member.type || 'EthereumAddress'
         };
       });
     
-    console.log(`Processed ${processedMembers.length} members for ${daoId}:`, processedMembers);
+    console.log(`Processed ${processedMembers.length} members for ${daoId}:`, processedMembers.slice(0, 5));
     
     return processedMembers;
     
