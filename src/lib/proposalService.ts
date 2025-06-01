@@ -15,7 +15,7 @@ export interface Proposal {
   url?: string;
 }
 
-// DAOIP-4 categorization keywords
+//  categorization keywords
 const categoryKeywords = {
   governance: ['governance', 'constitution', 'voting', 'delegate', 'parameters', 'rules', 'policy', 'amendment', 'bylaws', 'charter'],
   treasury: ['treasury', 'funding', 'budget', 'financial', 'allocation', 'spend', 'payment', 'grant', 'investment', 'funds'],
