@@ -1,20 +1,34 @@
 
 import { WagmiProvider, createConfig, http } from "wagmi";
-import { mainnet, optimismSepolia } from "wagmi/chains";
+import { mainnet, optimism, optimismSepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectKitProvider, getDefaultConfig } from "connectkit";
 
 // Environment variables - move these to Supabase secrets before going public
 const REACT_PUBLIC_WALLETCONNCT_PROJECT_ID = "a88dc486e89aa2620b970e5c80f8e7e6";
 const REACT_PUBLIC_ALCHEMY_ID = "https://opt-sepolia.g.alchemy.com/v2/exFlRA7r_UeLVbAJExOA2-ZI0SrUFmcm";
+const REACT_PUBLIC_OP_MAINNET_RPC = "https://mainnet.optimism.io";
 const REACT_PUBLIC_LH_API_KEY = "f16b5a44.24bd5c619e0648fdab2cbdfde9983f7c";
+
+// Contract addresses for both networks
+export const CONTRACT_ADDRESSES = {
+  [optimism.id]: "0x1b99E303b9A1D8279F45Bb6e510863fB669cDf65", // OP Mainnet
+  [optimismSepolia.id]: "0xcaD1561c501eAAB2a44FD257b465b43D888b5b45" // OP Sepolia
+} as const;
+
+// Pyth Entropy addresses (example addresses - replace with actual)
+export const PYTH_ENTROPY_ADDRESSES = {
+  [optimism.id]: "0x4374e5a8b9C22271E9EB878A2AA31DE97DF15DAF", // OP Mainnet
+  [optimismSepolia.id]: "0x4374e5a8b9C22271E9EB878A2AA31DE97DF15DAF" // OP Sepolia
+} as const;
 
 const config = createConfig(
   getDefaultConfig({
-    // Your dApps chains
-    chains: [optimismSepolia],
+    // Your dApps chains - now supporting both OP networks
+    chains: [optimism, optimismSepolia],
     transports: {
       // RPC URL for each chain
+      [optimism.id]: http(REACT_PUBLIC_OP_MAINNET_RPC),
       [optimismSepolia.id]: http(REACT_PUBLIC_ALCHEMY_ID),
     },
 

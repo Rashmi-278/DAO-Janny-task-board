@@ -7,6 +7,7 @@ import { Calendar, User, Dice6, ExternalLink, UserPlus, Check } from 'lucide-rea
 import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 import type { Member } from '@/lib/memberService';
 import { notificationService } from '@/lib/notificationService';
+import { FeeEstimator } from '@/components/ui/feeEstimator';
 
 interface Task {
   id: string;
@@ -48,6 +49,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
   
   const [isOptingIn, setIsOptingIn] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [estimatedFee, setEstimatedFee] = useState<bigint | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
 
   if (!task) {
     console.error('TaskCard: task is null or undefined');
@@ -106,10 +109,51 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
   };
 
   const handleRandomAssignment = async () => {
-    console.log('TaskCard: Random assignment clicked for task:', safeTask.id);
+    console.log('TaskCard: Smart contract assignment clicked for task:', safeTask.id);
     setIsAssigning(true);
+    setTxHash(null);
     
     try {
+      const availableMembers = members && members.length > 0 
+        ? members.map(m => m.address).filter(Boolean)
+        : ['0x742d35Cc6506C4B4A6f7C9e4d6B8e9a7D8C8E8F8A', '0x123d35Cc6506C4B4A6f7C9e4d6B8e9a7D8C8E8F8B']; // Fallback addresses
+      
+      if (availableMembers.length === 0) {
+        throw new Error('No eligible members available for assignment');
+      }
+
+      // Use smart contract for random assignment
+      const chainId = 11155420; // OP Sepolia - get from wagmi in real implementation
+      const transactionHash = await contractService.assignTaskRandomly(
+        safeTask.id,
+        availableMembers,
+        chainId
+      );
+
+      setTxHash(transactionHash);
+      
+      const metadata = generateTaskMetadata({
+        action: 'smart_contract_assignment',
+        taskId: safeTask.id,
+        timestamp: new Date().toISOString(),
+        eligibleMembers: availableMembers,
+        taskDetails: safeTask,
+        transactionHash,
+        randomnessSource: 'pyth_entropy',
+        chainId
+      });
+
+      await saveToFilecoin(metadata);
+      
+      // Send quirky notification
+      notificationService.notifyTaskUpdate(safeTask.title, 'submitted for random assignment');
+      
+      console.log('TaskCard: Smart contract assignment submitted:', metadata);
+    } catch (error) {
+      console.error('TaskCard: Failed to assign via smart contract:', error);
+      
+      // Fallback to original logic if smart contract fails
+      console.log('TaskCard: Falling back to client-side random assignment');
       const availableMembers = members && members.length > 0 
         ? members.map(m => m.address).filter(Boolean)
         : ['alice.eth', 'bob.eth', 'charlie.eth', 'diana.eth'];
@@ -117,12 +161,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       const randomMember = availableMembers[Math.floor(Math.random() * availableMembers.length)];
       
       const metadata = generateTaskMetadata({
-        action: 'random_assignment',
+        action: 'fallback_assignment',
         taskId: safeTask.id,
         timestamp: new Date().toISOString(),
         assignedDelegate: randomMember,
         taskDetails: safeTask,
-        randomnessSource: 'pyth_entropy'
+        randomnessSource: 'client_fallback',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
 
       await saveToFilecoin(metadata);
@@ -131,9 +176,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       // Send quirky notification
       notificationService.notifyTaskAssignment(safeTask.title, randomMember);
       
-      console.log('TaskCard: Random assignment completed:', metadata);
-    } catch (error) {
-      console.error('TaskCard: Failed to assign randomly:', error);
+      console.log('TaskCard: Fallback assignment completed:', metadata);
     } finally {
       setIsAssigning(false);
     }
@@ -253,6 +296,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             <div className="flex items-center text-xs text-gray-400">
               <User className="w-3 h-3 mr-2 flex-shrink-0" />
               <span className="truncate">{safeTask.assignee}</span>
+              {txHash && (
+                <Badge className="ml-2 bg-blue-500/20 text-blue-300 text-xs">
+                  TX: {txHash.slice(0, 8)}...
+                </Badge>
+              )}
             </div>
           )}
           
@@ -278,7 +326,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
           )}
           
           {shouldShowRandomAssignment && (
-            <div className="pt-2 border-t border-white/10">
+            <div className="pt-2 border-t border-white/10 space-y-2">
+              {/* Show fee estimate if members are available */}
+              {members && members.length > 0 && (
+                <FeeEstimator
+                  taskId={safeTask.id}
+                  eligibleMembers={members.map(m => m.address).filter(Boolean)}
+                  onFeeEstimated={setEstimatedFee}
+                  className="mb-2"
+                />
+              )}
+              
               <Button 
                 size="sm" 
                 variant="outline"
@@ -287,8 +345,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
                 className="w-full text-xs h-7 bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
               >
                 <Dice6 className="w-3 h-3 mr-1" />
-                {isAssigning ? 'Randomly Assigning...' : 'Random Assignment'}
+                {isAssigning ? 'Assigning via Smart Contract...' : 'Smart Contract Assignment'}
               </Button>
+              
+              {estimatedFee && (
+                <p className="text-xs text-gray-400 text-center">
+                  Uses Pyth Entropy for true randomness
+                </p>
+              )}
+              
+              {txHash && (
+                <p className="text-xs text-green-400 text-center">
+                  Transaction submitted: {txHash.slice(0, 12)}...
+                </p>
+              )}
             </div>
           )}
         </div>
