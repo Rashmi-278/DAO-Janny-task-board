@@ -71,7 +71,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
   const shouldShowRandomAssignment = status !== 'done' && !isTaskAssigned;
 
   return (
-    <Card className="backdrop-blur-lg bg-white/10 border-white/20 hover:bg-white/15 transition-all duration-300 group">
+    <Card className="backdrop-blur-lg bg-white/10 border-white/20 hover:bg-white/15 transition-all duration-300 group relative">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <CardTitle className="text-white text-sm font-medium leading-tight line-clamp-2">
