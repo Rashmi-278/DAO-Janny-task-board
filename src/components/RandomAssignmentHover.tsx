@@ -39,7 +39,7 @@ export const RandomAssignmentHover: React.FC<RandomAssignmentHoverProps> = ({
           {isAssigning ? 'Assigning...' : 'Random Assignment'}
         </Button>
       </HoverCardTrigger>
-      <HoverCardContent className="w-80 bg-slate-800 border-white/20 p-4">
+      <HoverCardContent className="w-80 bg-slate-800 border-white/20 p-4 z-[9999]">
         <div className="space-y-3">
           <div className="flex items-center space-x-2">
             <AlertTriangle className="w-4 h-4 text-yellow-400" />
