@@ -1,3 +1,4 @@
+
 import { 
   readContract, 
   writeContract, 
@@ -113,7 +114,7 @@ export interface ContractService {
   getAdminRole: (chainId: number) => Promise<string>;
   
   // Task assignment
-  assignTaskRandomly: (taskId: string, eligibleMembers: string[], chainId: number) => Promise<string>;
+  assignTaskRandomly: (taskId: string, eligibleMembers: string[], chainId: number, account: string) => Promise<string>;
   
   // Event listening
   watchTaskAssignments: (chainId: number, callback: (event: any) => void) => () => void;
@@ -220,7 +221,7 @@ class ContractServiceImpl implements ContractService {
     }
   }
 
-  async assignTaskRandomly(taskId: string, eligibleMembers: string[], chainId: number): Promise<string> {
+  async assignTaskRandomly(taskId: string, eligibleMembers: string[], chainId: number, account: string): Promise<string> {
     try {
       const contractAddress = CONTRACT_ADDRESSES[chainId as keyof typeof CONTRACT_ADDRESSES];
       if (!contractAddress) {
@@ -244,7 +245,8 @@ class ContractServiceImpl implements ContractService {
         functionName: 'assignTask',
         args: [taskId, eligibleMembers as `0x${string}`[], userRandomNumber],
         value: feeWithBuffer,
-        chainId
+        chainId,
+        account: account as `0x${string}`
       });
 
       console.log('Task assignment transaction submitted:', txHash);

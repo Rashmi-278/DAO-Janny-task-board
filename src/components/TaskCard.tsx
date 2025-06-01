@@ -9,6 +9,7 @@ import type { Member } from '@/lib/memberService';
 import { notificationService } from '@/lib/notificationService';
 import { FeeEstimator } from '@/components/FeeEstimator';
 import { contractService } from '@/lib/contractService';
+import { useAccount, useChainId } from 'wagmi';
 
 interface Task {
   id: string;
@@ -48,6 +49,8 @@ const typeColors = {
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members = [], status }) => {
   console.log('TaskCard: Rendering with task:', task);
   
+  const { address } = useAccount();
+  const chainId = useChainId();
   const [isOptingIn, setIsOptingIn] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<bigint | null>(null);
@@ -123,12 +126,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
         throw new Error('No eligible members available for assignment');
       }
 
+      if (!address) {
+        throw new Error('Wallet not connected');
+      }
+
       // Use smart contract for random assignment
-      const chainId = 11155420; // OP Sepolia - get from wagmi in real implementation
       const transactionHash = await contractService.assignTaskRandomly(
         safeTask.id,
         availableMembers,
-        chainId
+        chainId,
+        address
       );
 
       setTxHash(transactionHash);
