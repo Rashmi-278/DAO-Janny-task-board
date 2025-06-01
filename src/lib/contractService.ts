@@ -1,4 +1,3 @@
-
 import { 
   readContract, 
   writeContract, 
@@ -9,6 +8,7 @@ import {
 import { parseEther, formatEther, keccak256, toBytes } from 'viem';
 import { optimism, optimismSepolia } from 'wagmi/chains';
 import { CONTRACT_ADDRESSES, PYTH_ENTROPY_ADDRESSES, config } from './Web3Provider';
+import type { Member } from './memberService';
 
 // Complete ABI for ProposalDecision contract
 export const PROPOSAL_DECISION_ABI = [
@@ -104,6 +104,16 @@ export const ROLE_MAPPING = {
   'operations': CONTRACT_ROLES.OPERATIONS_ROLE
 } as const;
 
+// Domain mapping for task types
+export const DOMAIN_MAPPING = {
+  'governance': ['governance', 'strategy', 'unassigned'],
+  'treasury': ['accounting', 'business_development', 'strategy', 'unassigned'],
+  'technical': ['tech', 'contracts', 'unassigned'],
+  'community': ['business_development', 'strategy', 'unassigned'],
+  'grants': ['accounting', 'business_development', 'strategy', 'unassigned'],
+  'operations': ['business_development', 'strategy', 'unassigned']
+} as const;
+
 export interface ContractService {
   // Fee estimation
   getEntropyFee: (chainId: number) => Promise<bigint>;
@@ -118,6 +128,9 @@ export interface ContractService {
   
   // Event listening
   watchTaskAssignments: (chainId: number, callback: (event: any) => void) => () => void;
+  
+  // New method for filtering members by domain
+  filterMembersByDomain: (members: Member[], taskType: string) => Member[];
 }
 
 class ContractServiceImpl implements ContractService {
@@ -256,6 +269,23 @@ class ContractServiceImpl implements ContractService {
       console.error('Failed to assign task:', error);
       throw error;
     }
+  }
+
+  filterMembersByDomain(members: Member[], taskType: string): Member[] {
+    const allowedDomains = DOMAIN_MAPPING[taskType as keyof typeof DOMAIN_MAPPING] || ['unassigned'];
+    
+    const filteredMembers = members.filter(member => 
+      member.domain && allowedDomains.includes(member.domain)
+    );
+    
+    // If no members match the domain criteria, fall back to all members
+    if (filteredMembers.length === 0) {
+      console.warn(`No members found for domain ${taskType}, using all available members`);
+      return members;
+    }
+    
+    console.log(`Filtered ${filteredMembers.length} members for ${taskType} domain:`, filteredMembers.map(m => m.domain));
+    return filteredMembers;
   }
 
   watchTaskAssignments(chainId: number, callback: (event: any) => void): () => void {

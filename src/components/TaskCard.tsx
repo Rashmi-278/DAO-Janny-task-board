@@ -3,12 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, User, Dice6, ExternalLink, UserPlus, Check } from 'lucide-react';
+import { Calendar, User, ExternalLink, UserPlus, Check } from 'lucide-react';
 import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 import type { Member } from '@/lib/memberService';
 import { notificationService } from '@/lib/notificationService';
 import { FeeEstimator } from '@/components/FeeEstimator';
-import { TransactionCostTooltip } from '@/components/TransactionCostTooltip';
+import { RandomAssignmentHover } from '@/components/RandomAssignmentHover';
 import { contractService } from '@/lib/contractService';
 import { useAccount, useChainId } from 'wagmi';
 
@@ -131,12 +131,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
     setTxHash(null);
     
     try {
-      const availableMembers = members && members.length > 0 
-        ? members.map(m => m.address).filter(Boolean)
-        : ['0x742d35Cc6506C4B4A6f7C9e4d6B8e9a7D8C8E8F8A', '0x123d35Cc6506C4B4A6f7C9e4d6B8e9a7D8C8E8F8B']; // Fallback addresses
+      // Filter members by domain before assignment
+      const filteredMembers = contractService.filterMembersByDomain(members, safeTask.type);
+      const eligibleAddresses = filteredMembers.map(m => m.address).filter(Boolean);
       
-      if (availableMembers.length === 0) {
-        throw new Error('No eligible members available for assignment');
+      if (eligibleAddresses.length === 0) {
+        throw new Error('No eligible members available for this proposal domain');
       }
 
       if (!address) {
@@ -146,28 +146,36 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       // Use smart contract for random assignment
       const transactionHash = await contractService.assignTaskRandomly(
         safeTask.id,
-        availableMembers,
+        eligibleAddresses,
         chainId,
         address
       );
 
       setTxHash(transactionHash);
       
+      // Select a random member from the filtered pool for immediate UI update
+      const randomMember = filteredMembers[Math.floor(Math.random() * filteredMembers.length)];
+      
       const metadata = generateTaskMetadata({
         action: 'random_assignment',
         taskId: safeTask.id,
         timestamp: new Date().toISOString(),
-        eligibleMembers: availableMembers,
+        eligibleMembers: eligibleAddresses,
+        assignedMember: randomMember.address,
         taskDetails: safeTask,
         transactionHash,
         randomnessSource: 'pyth_entropy',
-        chainId
+        chainId,
+        domainFilter: safeTask.type
       });
 
       await saveToFilecoin(metadata);
       
+      // Update UI immediately with the selected member
+      onTaskUpdate?.(safeTask.id, { assignee: randomMember.address });
+      
       // Send quirky notification
-      notificationService.notifyTaskUpdate(safeTask.title, 'submitted for random assignment');
+      notificationService.notifyTaskAssignment(safeTask.title, randomMember.name || randomMember.address);
       
       console.log('TaskCard: Random assignment submitted:', metadata);
     } catch (error) {
@@ -175,27 +183,27 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       
       // Fallback to original logic if smart contract fails
       console.log('TaskCard: Falling back to client-side random assignment');
-      const availableMembers = members && members.length > 0 
-        ? members.map(m => m.address).filter(Boolean)
-        : ['alice.eth', 'bob.eth', 'charlie.eth', 'diana.eth'];
+      const filteredMembers = contractService.filterMembersByDomain(members, safeTask.type);
+      const fallbackMembers = filteredMembers.length > 0 ? filteredMembers : members;
       
-      const randomMember = availableMembers[Math.floor(Math.random() * availableMembers.length)];
+      const randomMember = fallbackMembers[Math.floor(Math.random() * fallbackMembers.length)];
       
       const metadata = generateTaskMetadata({
         action: 'fallback_assignment',
         taskId: safeTask.id,
         timestamp: new Date().toISOString(),
-        assignedDelegate: randomMember,
+        assignedDelegate: randomMember.address,
         taskDetails: safeTask,
         randomnessSource: 'client_fallback',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        domainFilter: safeTask.type
       });
 
       await saveToFilecoin(metadata);
-      onTaskUpdate?.(safeTask.id, { assignee: randomMember });
+      onTaskUpdate?.(safeTask.id, { assignee: randomMember.address });
       
       // Send quirky notification
-      notificationService.notifyTaskAssignment(safeTask.title, randomMember);
+      notificationService.notifyTaskAssignment(safeTask.title, randomMember.name || randomMember.address);
       
       console.log('TaskCard: Fallback assignment completed:', metadata);
     } finally {
@@ -326,14 +334,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
           )}
           
           {!isTaskAssigned && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 overflow-hidden">
               {safeTask.allowsOptIn && (
                 <Button 
                   size="sm" 
                   variant="outline"
                   onClick={handleOptIn}
                   disabled={isOptingIn}
-                  className="text-xs h-7 bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+                  className="text-xs h-7 bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30 flex-shrink-0"
                 >
                   {isOptingIn ? (
                     <Check className="w-3 h-3 mr-1" />
@@ -346,28 +354,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             </div>
           )}
           
-          {shouldShowRandomAssignment && (
+          {shouldShowRandomAssignment && estimatedFee && (
             <div className="pt-2 border-t border-white/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={handleRandomAssignment}
-                  disabled={isAssigning}
-                  className="flex-1 text-xs h-7 bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
-                >
-                  <Dice6 className="w-3 h-3 mr-1" />
-                  {isAssigning ? 'Assigning...' : 'Random Assignment'}
-                </Button>
-                
-                {estimatedFee && entropyFee && gasEstimate && (
-                  <TransactionCostTooltip
-                    totalFee={estimatedFee}
-                    entropyFee={entropyFee}
-                    gasEstimate={gasEstimate}
-                    className="ml-2"
-                  />
-                )}
+              <div className="flex items-center justify-between overflow-hidden">
+                <RandomAssignmentHover
+                  isAssigning={isAssigning}
+                  estimatedFee={estimatedFee}
+                  onRandomAssignment={handleRandomAssignment}
+                  className="flex-1 min-w-0"
+                />
               </div>
               
               {/* Hidden fee estimator to get the fee data */}
