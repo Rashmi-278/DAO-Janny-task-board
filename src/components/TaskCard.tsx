@@ -7,7 +7,8 @@ import { Calendar, User, Dice6, ExternalLink, UserPlus, Check } from 'lucide-rea
 import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 import type { Member } from '@/lib/memberService';
 import { notificationService } from '@/lib/notificationService';
-import { FeeEstimator } from '@/components/ui/feeEstimator';
+import { FeeEstimator } from '@/components/FeeEstimator';
+import { contractService } from '@/lib/contractService';
 
 interface Task {
   id: string;

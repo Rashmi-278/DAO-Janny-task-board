@@ -142,7 +142,7 @@ class ContractServiceImpl implements ContractService {
         abi: PYTH_ENTROPY_ABI,
         functionName: 'getFee',
         chainId
-      });
+      } as any);
 
       // Cache the result
       this.feeCache.set(chainId, { fee: fee as bigint, timestamp: Date.now() });
@@ -169,7 +169,7 @@ class ContractServiceImpl implements ContractService {
         to: contractAddress as `0x${string}`,
         data: `0x${taskId}${members.join('')}${userRandomNumber}`, // Simplified encoding
         chainId
-      });
+      } as any);
 
       return gasEstimate;
     } catch (error) {
@@ -192,7 +192,7 @@ class ContractServiceImpl implements ContractService {
         functionName: 'hasRole',
         args: [roleBytes, address as `0x${string}`],
         chainId
-      });
+      } as any);
 
       return hasRole as boolean;
     } catch (error) {
@@ -211,7 +211,7 @@ class ContractServiceImpl implements ContractService {
         abi: PROPOSAL_DECISION_ABI,
         functionName: 'ADMIN_ROLE',
         chainId
-      });
+      } as any);
 
       console.log(`ADMIN_ROLE constant for chain ${chainId}:`, adminRole);
       return adminRole as string;
@@ -246,7 +246,7 @@ class ContractServiceImpl implements ContractService {
         args: [taskId, eligibleMembers as `0x${string}`[], userRandomNumber],
         value: feeWithBuffer,
         chainId
-      });
+      } as any);
 
       console.log('Task assignment transaction submitted:', txHash);
       return txHash;
@@ -279,7 +279,7 @@ class ContractServiceImpl implements ContractService {
       onError: (error) => {
         console.error('Error watching TaskAssigned events:', error);
       }
-    });
+    } as any);
 
     return unwatch;
   }
