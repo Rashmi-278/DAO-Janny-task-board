@@ -1,11 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useNavigate } from 'react-router-dom';
+import { 
+  useNotification,
+  useTransactionPopup 
+} from "@blockscout/app-sdk";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CheckCircle, Clock, AlertCircle, User, Calendar, Shield, Users, TrendingUp } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, User, Calendar, Shield, Users, TrendingUp, ExternalLink } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { fetchDAOProposals, type Proposal } from '@/lib/proposalService';
 import { fetchDAOMembers, type Member } from '@/lib/memberService';
@@ -52,6 +55,8 @@ interface UserProfile {
 const MemberProfile = () => {
   const { address, isConnected } = useAccount();
   const navigate = useNavigate();
+  const { openTxToast } = useNotification();
+  const { openPopup } = useTransactionPopup();
   const [proposals, setProposals] = useState<TaskProposal[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,6 +76,9 @@ const MemberProfile = () => {
         rpcUrl: 'https://optimism.drpc.org',
         apiKey: process.env.REACT_PUBLIC_BLOCKSCOUT_API_KEY
       });
+
+      // Set the notification hooks from Blockscout SDK
+      blockscoutService.setNotificationHooks(openTxToast, openPopup);
 
       const setupWatcher = async () => {
         const stopWatching = await blockscoutService.watchAddress(address, (transaction) => {
@@ -95,7 +103,7 @@ const MemberProfile = () => {
         }
       };
     }
-  }, [address]);
+  }, [address, openTxToast, openPopup]);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -170,6 +178,12 @@ const MemberProfile = () => {
     }
   };
 
+  const handleViewTransactionHistory = () => {
+    if (address) {
+      blockscoutService.showTransactionHistory(address);
+    }
+  };
+
   const groupedProposals = {
     todo: proposals.filter(p => p.taskStatus === 'todo'),
     'in-progress': proposals.filter(p => p.taskStatus === 'in-progress'),
@@ -224,6 +238,17 @@ const MemberProfile = () => {
                     <p className="text-white font-mono text-sm break-all">
                       {address}
                     </p>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleViewTransactionHistory}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View Transaction History
+                    </Button>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

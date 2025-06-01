@@ -2,9 +2,11 @@
 import { useState } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { useParams } from 'react-router-dom';
+import { useNotification } from "@blockscout/app-sdk";
 import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 import { notificationService } from '@/lib/notificationService';
 import { contractService } from '@/lib/contractService';
+import { blockscoutService } from '@/lib/blockscoutService';
 import type { Member } from '@/lib/memberService';
 import { checkDAOMembership } from './taskUtils';
 
@@ -28,6 +30,7 @@ export const useTaskActions = (
   const { address } = useAccount();
   const chainId = useChainId();
   const { daoId } = useParams();
+  const { openTxToast } = useNotification();
   const [isOptingIn, setIsOptingIn] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<bigint | null>(null);
@@ -63,7 +66,7 @@ export const useTaskActions = (
       const isMember = await checkDAOMembership(daoId, address);
       if (!isMember) {
         console.error('User is not a member of this DAO');
-        notificationService.notifyTaskUpdate('failed - you are not a DAO member');
+        notificationService.notifyTaskUpdate(task.title, 'failed - you are not a DAO member');
         return;
       }
 
@@ -117,6 +120,14 @@ export const useTaskActions = (
       );
 
       setTxHash(transactionHash);
+      
+      // Show Blockscout transaction toast
+      if (openTxToast) {
+        await openTxToast(chainId.toString(), transactionHash);
+      }
+      
+      // Also show via blockscout service
+      await blockscoutService.showTransactionToast(transactionHash);
       
       // Only assign if transaction was successful
       const randomMember = filteredMembers[Math.floor(Math.random() * filteredMembers.length)];
