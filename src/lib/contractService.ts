@@ -1,4 +1,3 @@
-
 import { 
   readContract, 
   writeContract, 
@@ -8,8 +7,7 @@ import {
 } from 'wagmi/actions';
 import { parseEther, formatEther, keccak256, toBytes } from 'viem';
 import { optimism, optimismSepolia } from 'wagmi/chains';
-import { CONTRACT_ADDRESSES, PYTH_ENTROPY_ADDRESSES } from './Web3Provider';
-import { config } from './Web3Provider';
+import { CONTRACT_ADDRESSES, PYTH_ENTROPY_ADDRESSES, config } from './Web3Provider';
 
 // Complete ABI for ProposalDecision contract
 export const PROPOSAL_DECISION_ABI = [
