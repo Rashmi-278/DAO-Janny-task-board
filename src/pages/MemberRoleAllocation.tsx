@@ -244,16 +244,7 @@ const MemberRoleAllocation = () => {
                 className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
               />
             </div>
-            <Button
-              variant={showAssignedOnly ? "default" : "outline"}
-              onClick={() => setShowAssignedOnly(!showAssignedOnly)}
-              className={showAssignedOnly 
-                ? "bg-blue-600 text-white" 
-                : "bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
-              }
-            >
-              {showAssignedOnly ? "Show All" : "Show Assigned Only"}
-            </Button>
+    
           </div>
         </div>
 

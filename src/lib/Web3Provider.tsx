@@ -1,14 +1,15 @@
-
+import React from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { mainnet, optimism, optimismSepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectKitProvider, getDefaultConfig } from "connectkit";
 
 // Environment variables - move these to Supabase secrets before going public
-const REACT_PUBLIC_WALLETCONNCT_PROJECT_ID = process.env.REACT_PUBLIC_WALLETCONNCT_PROJECT_ID;
-const REACT_PUBLIC_ALCHEMY_ID = process.env.REACT_PUBLIC_ALCHEMY_ID;
+const REACT_PUBLIC_WALLETCONNCT_PROJECT_ID = import.meta.env.VITE_PUBLIC_WALLETCONNECT_PROJECT_ID;
+const REACT_PUBLIC_ALCHEMY_ID = import.meta.env.VITE_PUBLIC_ALCHEMY_ID;
 const REACT_PUBLIC_OP_MAINNET_RPC = "https://mainnet.optimism.io";
-const REACT_PUBLIC_LH_API_KEY = process.env.REACT_PUBLIC_LH_API_KEY;
+const REACT_PUBLIC_LH_API_KEY = import.meta.env.VITE_PUBLIC_LH_API_KEY;
+
 
 // Contract addresses for both networks
 export const CONTRACT_ADDRESSES = {

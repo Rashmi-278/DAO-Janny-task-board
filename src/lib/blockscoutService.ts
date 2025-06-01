@@ -14,7 +14,7 @@ class BlockscoutService {
 
   initialize(config: BlockscoutConfig) {
     this.config = {
-      apiKey: config.apiKey || process.env.REACT_PUBLIC_BLOCKSCOUT_API_KEY
+      apiKey: config.apiKey || import.meta.env.VITE_PUBLIC_BLOCKSCOUT_API_KEY,
       baseUrl: config.baseUrl || 'https://optimism.blockscout.com',
       network: config.network || 'optimism',
       rpcUrl: config.rpcUrl || 'https://optimism.drpc.org'
