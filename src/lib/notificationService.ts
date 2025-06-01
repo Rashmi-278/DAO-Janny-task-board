@@ -72,7 +72,7 @@ class NotificationService {
     this.addNotification({
       type: 'assignment',
       title: '🧹 DAO Janny Alert!',
-      message: `DAO Janny has assigned you "${taskTitle}" - time to clean up the blockchain! 🚀`,
+      message: `DAO Janny has assigned this task to a member "${taskTitle}" - time to clean up the blockchain! 🚀`,
     });
   }
 
@@ -93,7 +93,7 @@ class NotificationService {
     });
   }
 
-  notifyTaskUpdate(taskTitle: string, updateType: string) {
+  notifyTaskUpdate(taskTitle?: string, updateType?: string) {
     const quirkyUpdates = {
       'opted in': `You've volunteered for "${taskTitle}" - the DAO Janny approves! 🙋‍♂️`,
       'unassigned': `"${taskTitle}" is now free-floating in the DAO-verse 🌌`,

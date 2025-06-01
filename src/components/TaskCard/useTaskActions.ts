@@ -63,7 +63,7 @@ export const useTaskActions = (
       const isMember = await checkDAOMembership(daoId, address);
       if (!isMember) {
         console.error('User is not a member of this DAO');
-        notificationService.notifyTaskUpdate(task.title, 'failed - not a DAO member');
+        notificationService.notifyTaskUpdate('failed - you are not a DAO member');
         return;
       }
 
