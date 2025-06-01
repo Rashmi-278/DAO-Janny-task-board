@@ -195,7 +195,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
         taskId: safeTask.id,
         timestamp: new Date().toISOString(),
         eligibleMembers: eligibleAddresses,
-        assignedMember: randomMember.address,
+        assignedDelegate: randomMember.address, // Fixed: use assignedDelegate instead of assignedMember
         taskDetails: safeTask,
         transactionHash,
         randomnessSource: 'pyth_entropy',
@@ -402,12 +402,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             </div>
           )}
           
-          {shouldShowRandomAssignment && estimatedFee && (
+          {shouldShowRandomAssignment && (
             <div className="pt-2 border-t border-white/10 space-y-2">
               <div className="flex items-center justify-between overflow-hidden">
                 <RandomAssignmentHover
                   isAssigning={isAssigning}
-                  estimatedFee={estimatedFee}
+                  estimatedFee={estimatedFee || BigInt(0)}
                   onRandomAssignment={handleRandomAssignment}
                   className="flex-1 min-w-0"
                 />
