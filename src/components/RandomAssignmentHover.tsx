@@ -58,9 +58,6 @@ export const RandomAssignmentHover: React.FC<RandomAssignmentHoverProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-gray-400 text-xs">Estimated Cost:</span>
               <div className="flex items-center space-x-2">
-                <Badge className="bg-green-500/20 text-green-300 text-xs">
-                  {ethAmount} ETH
-                </Badge>
                 {usdAmount && (
                   <Badge className="bg-blue-500/20 text-blue-300 text-xs">
                     <DollarSign className="w-3 h-3 mr-1" />
