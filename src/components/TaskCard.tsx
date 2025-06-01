@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -314,9 +313,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
         </div>
         
         <div className="flex items-center space-x-2 flex-wrap gap-1">
-          <Badge className={priorityColors[safeTask.priority as keyof typeof priorityColors] || priorityColors.medium}>
-            {safeTask.priority}
-          </Badge>
           <Badge className={typeColors[safeTask.type as keyof typeof typeColors] || 'bg-gray-500/20 text-gray-300'}>
             {safeTask.type}
           </Badge>
