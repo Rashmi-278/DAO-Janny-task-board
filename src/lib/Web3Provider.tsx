@@ -22,7 +22,7 @@ export const PYTH_ENTROPY_ADDRESSES = {
   [optimismSepolia.id]: "0x4374e5a8b9C22271E9EB878A2AA31DE97DF15DAF" // OP Sepolia
 } as const;
 
-const config = createConfig(
+export const config = createConfig(
   getDefaultConfig({
     // Your dApps chains - now supporting both OP networks
     chains: [optimism, optimismSepolia],

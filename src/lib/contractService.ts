@@ -5,10 +5,11 @@ import {
   watchContractEvent,
   getBalance,
   estimateGas
-} from '@wagmi/core';
+} from 'wagmi/actions';
 import { parseEther, formatEther, keccak256, toBytes } from 'viem';
 import { optimism, optimismSepolia } from 'wagmi/chains';
 import { CONTRACT_ADDRESSES, PYTH_ENTROPY_ADDRESSES } from './Web3Provider';
+import { config } from './Web3Provider';
 
 // Complete ABI for ProposalDecision contract
 export const PROPOSAL_DECISION_ABI = [
@@ -137,12 +138,12 @@ class ContractServiceImpl implements ContractService {
         throw new Error(`Pyth Entropy not supported on chain ${chainId}`);
       }
 
-      const fee = await readContract({
+      const fee = await readContract(config, {
         address: entropyAddress as `0x${string}`,
         abi: PYTH_ENTROPY_ABI,
         functionName: 'getFee',
         chainId
-      } as any);
+      });
 
       // Cache the result
       this.feeCache.set(chainId, { fee: fee as bigint, timestamp: Date.now() });
@@ -165,11 +166,11 @@ class ContractServiceImpl implements ContractService {
 
       const userRandomNumber = keccak256(toBytes(`${taskId}-${Date.now()}-${Math.random()}`));
       
-      const gasEstimate = await estimateGas({
+      const gasEstimate = await estimateGas(config, {
         to: contractAddress as `0x${string}`,
         data: `0x${taskId}${members.join('')}${userRandomNumber}`, // Simplified encoding
         chainId
-      } as any);
+      });
 
       return gasEstimate;
     } catch (error) {
@@ -186,13 +187,13 @@ class ContractServiceImpl implements ContractService {
       const roleBytes = ROLE_MAPPING[role as keyof typeof ROLE_MAPPING];
       if (!roleBytes) return false;
 
-      const hasRole = await readContract({
+      const hasRole = await readContract(config, {
         address: contractAddress as `0x${string}`,
         abi: PROPOSAL_DECISION_ABI,
         functionName: 'hasRole',
         args: [roleBytes, address as `0x${string}`],
         chainId
-      } as any);
+      });
 
       return hasRole as boolean;
     } catch (error) {
@@ -206,12 +207,12 @@ class ContractServiceImpl implements ContractService {
       const contractAddress = CONTRACT_ADDRESSES[chainId as keyof typeof CONTRACT_ADDRESSES];
       if (!contractAddress) throw new Error(`Contract not deployed on chain ${chainId}`);
 
-      const adminRole = await readContract({
+      const adminRole = await readContract(config, {
         address: contractAddress as `0x${string}`,
         abi: PROPOSAL_DECISION_ABI,
         functionName: 'ADMIN_ROLE',
         chainId
-      } as any);
+      });
 
       console.log(`ADMIN_ROLE constant for chain ${chainId}:`, adminRole);
       return adminRole as string;
@@ -239,14 +240,14 @@ class ContractServiceImpl implements ContractService {
 
       console.log('Assigning task with entropy fee:', formatEther(feeWithBuffer), 'ETH');
 
-      const txHash = await writeContract({
+      const txHash = await writeContract(config, {
         address: contractAddress as `0x${string}`,
         abi: PROPOSAL_DECISION_ABI,
         functionName: 'assignTask',
         args: [taskId, eligibleMembers as `0x${string}`[], userRandomNumber],
         value: feeWithBuffer,
         chainId
-      } as any);
+      });
 
       console.log('Task assignment transaction submitted:', txHash);
       return txHash;
@@ -265,7 +266,7 @@ class ContractServiceImpl implements ContractService {
 
     console.log(`Starting to watch TaskAssigned events on chain ${chainId}`);
 
-    const unwatch = watchContractEvent({
+    const unwatch = watchContractEvent(config, {
       address: contractAddress as `0x${string}`,
       abi: PROPOSAL_DECISION_ABI,
       eventName: 'TaskAssigned',
@@ -279,7 +280,7 @@ class ContractServiceImpl implements ContractService {
       onError: (error) => {
         console.error('Error watching TaskAssigned events:', error);
       }
-    } as any);
+    });
 
     return unwatch;
   }
