@@ -69,7 +69,7 @@ const MemberProfile = () => {
         network: 'optimism',
         baseUrl: 'https://optimism.blockscout.com',
         rpcUrl: 'https://optimism.drpc.org',
-        apiKey: 'b3f41bb5-ea66-403c-b270-dd9634e01f92'
+        apiKey: process.env.REACT_PUBLIC_BLOCKSCOUT_API_KEY
       });
 
       const setupWatcher = async () => {
