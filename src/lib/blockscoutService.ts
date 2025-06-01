@@ -11,6 +11,8 @@ interface BlockscoutConfig {
 class BlockscoutService {
   private config: BlockscoutConfig = {};
   private isConnected: boolean = false;
+  private openTxToast: ((chainId: string, txHash: string) => Promise<void>) | null = null;
+  private openPopup: ((params: { chainId: string; address?: string }) => void) | null = null;
 
   initialize(config: BlockscoutConfig) {
     this.config = {
@@ -30,6 +32,15 @@ class BlockscoutService {
     );
   }
 
+  // Set the notification hooks from the Blockscout SDK
+  setNotificationHooks(
+    openTxToast: (chainId: string, txHash: string) => Promise<void>,
+    openPopup: (params: { chainId: string; address?: string }) => void
+  ) {
+    this.openTxToast = openTxToast;
+    this.openPopup = openPopup;
+  }
+
   async getTransactionDetails(txHash: string) {
     if (!this.isConnected) {
       throw new Error('Blockscout Service not initialized');
@@ -47,6 +58,11 @@ class BlockscoutService {
       }
       
       const transaction = await response.json();
+      
+      // Use Blockscout SDK notification if available
+      if (this.openTxToast) {
+        await this.openTxToast("10", txHash); // Optimism chain ID
+      }
       
       notificationService.notifyBlockscoutEvent(
         'Transaction Retrieved',
@@ -144,6 +160,14 @@ class BlockscoutService {
         if (transactions.length > 0) {
           const latestTx = transactions[0];
           
+          // Use Blockscout SDK notification for transaction popup
+          if (this.openPopup) {
+            this.openPopup({
+              chainId: "10", // Optimism chain ID
+              address: address
+            });
+          }
+          
           notificationService.notifyBlockscoutEvent(
             'Transaction Activity Detected',
             `Latest transaction: ${latestTx.hash?.slice(0, 10)}... on Optimism`
@@ -166,6 +190,23 @@ class BlockscoutService {
         `Stopped monitoring ${address.slice(0, 6)}...${address.slice(-4)}`
       );
     };
+  }
+
+  // Method to show transaction history popup
+  showTransactionHistory(address?: string) {
+    if (this.openPopup) {
+      this.openPopup({
+        chainId: "10", // Optimism chain ID
+        address: address
+      });
+    }
+  }
+
+  // Method to show transaction toast
+  async showTransactionToast(txHash: string) {
+    if (this.openTxToast) {
+      await this.openTxToast("10", txHash); // Optimism chain ID
+    }
   }
 
   isInitialized(): boolean {
