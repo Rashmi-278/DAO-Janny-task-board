@@ -3,9 +3,10 @@ import {
   writeContract, 
   watchContractEvent,
   getBalance,
-  estimateGas
+  estimateGas,
+  simulateContract
 } from 'wagmi/actions';
-import { parseEther, formatEther, keccak256, toBytes } from 'viem';
+import { parseEther, formatEther, keccak256, toBytes, encodeFunctionData } from 'viem';
 import { optimism, optimismSepolia } from 'wagmi/chains';
 import { CONTRACT_ADDRESSES, PYTH_ENTROPY_ADDRESSES, config } from './Web3Provider';
 import type { Member } from './memberService';
@@ -178,16 +179,24 @@ class ContractServiceImpl implements ContractService {
 
       const userRandomNumber = keccak256(toBytes(`${taskId}-${Date.now()}-${Math.random()}`));
       
+      // Properly encode the function call data
+      const callData = encodeFunctionData({
+        abi: PROPOSAL_DECISION_ABI,
+        functionName: 'assignTask',
+        args: [taskId, members as `0x${string}`[], userRandomNumber]
+      });
+      
       const gasEstimate = await estimateGas(config, {
         to: contractAddress as `0x${string}`,
-        data: `0x${taskId}${members.join('')}${userRandomNumber}`, // Simplified encoding
+        data: callData,
         chainId
       });
 
+      console.log('Gas estimate for task assignment:', gasEstimate.toString());
       return gasEstimate;
     } catch (error) {
       console.error('Failed to estimate gas:', error);
-      return BigInt(100000); // Fallback gas estimate
+      return BigInt(200000); // Fallback gas estimate
     }
   }
 
@@ -244,13 +253,34 @@ class ContractServiceImpl implements ContractService {
       // Get the entropy fee
       const entropyFee = await this.getEntropyFee(chainId);
       
-      // Add 15% buffer for gas price fluctuations
-      const feeWithBuffer = (entropyFee * BigInt(115)) / BigInt(100);
+      // Add 20% buffer for gas price fluctuations
+      const feeWithBuffer = (entropyFee * BigInt(120)) / BigInt(100);
 
-      // Generate user random number
+      // Generate user random number for additional entropy
       const userRandomNumber = keccak256(toBytes(`${taskId}-${Date.now()}-${Math.random()}`));
 
-      console.log('Assigning task with entropy fee:', formatEther(feeWithBuffer), 'ETH');
+      console.log('Assigning task with params:', {
+        taskId,
+        eligibleMembers,
+        userRandomNumber,
+        entropyFee: formatEther(feeWithBuffer) + ' ETH'
+      });
+
+      // First simulate the contract call to catch any revert reasons
+      try {
+        await simulateContract(config, {
+          address: contractAddress as `0x${string}`,
+          abi: PROPOSAL_DECISION_ABI,
+          functionName: 'assignTask',
+          args: [taskId, eligibleMembers as `0x${string}`[], userRandomNumber],
+          value: feeWithBuffer,
+          chainId,
+          account: account as `0x${string}`
+        });
+      } catch (simError) {
+        console.error('Contract simulation failed:', simError);
+        throw new Error(`Contract call would fail: ${simError instanceof Error ? simError.message : 'Unknown error'}`);
+      }
 
       const txHash = await writeContract(config, {
         address: contractAddress as `0x${string}`,
@@ -263,10 +293,10 @@ class ContractServiceImpl implements ContractService {
         chain: chainId === optimism.id ? optimism : optimismSepolia
       });
 
-      console.log('Task assignment transaction submitted:', txHash);
+      console.log('Task assignment transaction submitted successfully:', txHash);
       return txHash;
     } catch (error) {
-      console.error('Failed to assign task:', error);
+      console.error('Failed to assign task on blockchain:', error);
       throw error;
     }
   }

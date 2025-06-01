@@ -109,7 +109,7 @@ export const useTaskActions = (
         throw new Error('Wallet not connected');
       }
 
-      console.log('TaskCard: Attempting blockchain random assignment...');
+      console.log('TaskCard: Attempting blockchain random assignment with eligible members:', eligibleAddresses);
       
       // Try blockchain assignment first
       const transactionHash = await contractService.assignTaskRandomly(
@@ -120,6 +120,7 @@ export const useTaskActions = (
       );
 
       setTxHash(transactionHash);
+      console.log('TaskCard: Transaction submitted successfully:', transactionHash);
       
       // Show Blockscout transaction toast
       if (openTxToast) {
@@ -129,36 +130,46 @@ export const useTaskActions = (
       // Also show via blockscout service
       await blockscoutService.showTransactionToast(transactionHash);
       
-      // Only assign if transaction was successful
-      const randomMember = filteredMembers[Math.floor(Math.random() * filteredMembers.length)];
+      // Wait for transaction to be mined and get the result
+      // For now, we'll do client-side assignment since we don't have event listening
+      const randomIndex = Math.floor(Math.random() * filteredMembers.length);
+      const selectedMember = filteredMembers[randomIndex];
+      
+      console.log('TaskCard: Randomly selected member:', selectedMember);
       
       const metadata = generateTaskMetadata({
         action: 'random_assignment',
         taskId: task.id,
         timestamp: new Date().toISOString(),
         eligibleMembers: eligibleAddresses,
-        assignedDelegate: randomMember.address,
+        assignedDelegate: selectedMember.address,
         taskDetails: task,
         transactionHash,
         randomnessSource: 'pyth_entropy',
         chainId
       });
 
-      await saveToFilecoin(metadata);
-      onTaskUpdate?.(task.id, { assignee: randomMember.address });
-      notificationService.notifyTaskAssignment(task.title, randomMember.name || randomMember.address);
+      try {
+        await saveToFilecoin(metadata);
+      } catch (metadataError) {
+        console.warn('TaskCard: Failed to save metadata to Filecoin, continuing with assignment:', metadataError);
+      }
+      
+      // Update the task with the assigned member
+      onTaskUpdate?.(task.id, { assignee: selectedMember.address });
+      notificationService.notifyTaskAssignment(task.title, selectedMember.name || selectedMember.address);
       
       console.log('TaskCard: Random assignment completed successfully:', metadata);
       
     } catch (error) {
-      console.error('TaskCard: Blockchain assignment failed:', error);
+      console.error('TaskCard: Random assignment failed:', error);
+      setTxHash(null);
       
       // Check if error is due to user rejection
       const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
       if (errorMessage.includes('rejected') || errorMessage.includes('denied') || errorMessage.includes('cancelled')) {
         console.log('TaskCard: User rejected transaction, not assigning task');
         notificationService.notifyTaskUpdate(task.title, 'transaction cancelled');
-        setTxHash(null);
         return; // Exit without fallback assignment
       }
       
@@ -183,7 +194,12 @@ export const useTaskActions = (
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      await saveToFilecoin(metadata);
+      try {
+        await saveToFilecoin(metadata);
+      } catch (metadataError) {
+        console.warn('TaskCard: Failed to save fallback metadata to Filecoin, continuing with assignment:', metadataError);
+      }
+      
       onTaskUpdate?.(task.id, { assignee: randomMember.address });
       notificationService.notifyTaskAssignment(task.title, randomMember.name || randomMember.address);
       
