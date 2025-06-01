@@ -46,20 +46,24 @@ export const useTaskActions = (
     
     if (!address) {
       console.error('Wallet not connected');
+      notificationService.notifyTaskUpdate(task.title, 'failed - wallet not connected');
       return;
     }
 
     if (!daoId) {
       console.error('DAO ID not found');
+      notificationService.notifyTaskUpdate(task.title, 'failed - DAO not found');
       return;
     }
 
     setIsOptingIn(true);
     
     try {
+      // Check DAO membership before allowing opt-in
       const isMember = await checkDAOMembership(daoId, address);
       if (!isMember) {
         console.error('User is not a member of this DAO');
+        notificationService.notifyTaskUpdate(task.title, 'failed - not a DAO member');
         return;
       }
 
@@ -74,11 +78,12 @@ export const useTaskActions = (
       await saveToFilecoin(metadata);
       onTaskUpdate?.(task.id, { assignee: address });
       
-      notificationService.notifyTaskUpdate(task.title, 'opted in');
+      notificationService.notifyTaskUpdate(task.title, 'opted in successfully');
       
       console.log('TaskCard: Delegate opted in successfully:', metadata);
     } catch (error) {
       console.error('TaskCard: Failed to opt in:', error);
+      notificationService.notifyTaskUpdate(task.title, 'failed to opt in');
     } finally {
       setIsOptingIn(false);
     }
@@ -101,6 +106,9 @@ export const useTaskActions = (
         throw new Error('Wallet not connected');
       }
 
+      console.log('TaskCard: Attempting blockchain random assignment...');
+      
+      // Try blockchain assignment first
       const transactionHash = await contractService.assignTaskRandomly(
         task.id,
         eligibleAddresses,
@@ -110,6 +118,7 @@ export const useTaskActions = (
 
       setTxHash(transactionHash);
       
+      // Only assign if transaction was successful
       const randomMember = filteredMembers[Math.floor(Math.random() * filteredMembers.length)];
       
       const metadata = generateTaskMetadata({
@@ -128,14 +137,28 @@ export const useTaskActions = (
       onTaskUpdate?.(task.id, { assignee: randomMember.address });
       notificationService.notifyTaskAssignment(task.title, randomMember.name || randomMember.address);
       
-      console.log('TaskCard: Random assignment submitted:', metadata);
-    } catch (error) {
-      console.error('TaskCard: Failed to assign via smart contract:', error);
+      console.log('TaskCard: Random assignment completed successfully:', metadata);
       
-      // Fallback logic
-      console.log('TaskCard: Falling back to client-side random assignment');
+    } catch (error) {
+      console.error('TaskCard: Blockchain assignment failed:', error);
+      
+      // Check if error is due to user rejection
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
+      if (errorMessage.includes('rejected') || errorMessage.includes('denied') || errorMessage.includes('cancelled')) {
+        console.log('TaskCard: User rejected transaction, not assigning task');
+        notificationService.notifyTaskUpdate(task.title, 'transaction cancelled');
+        setTxHash(null);
+        return; // Exit without fallback assignment
+      }
+      
+      // Only use fallback for technical errors, not user rejections
+      console.log('TaskCard: Technical error, falling back to client-side assignment');
       const filteredMembers = contractService.filterMembersByDomain(members, task.type);
       const fallbackMembers = filteredMembers.length > 0 ? filteredMembers : members;
+      
+      if (fallbackMembers.length === 0) {
+        throw new Error('No members available for assignment');
+      }
       
       const randomMember = fallbackMembers[Math.floor(Math.random() * fallbackMembers.length)];
       
