@@ -8,6 +8,7 @@ import { generateTaskMetadata, saveToFilecoin } from '@/lib/metadata';
 import type { Member } from '@/lib/memberService';
 import { notificationService } from '@/lib/notificationService';
 import { FeeEstimator } from '@/components/FeeEstimator';
+import { TransactionCostTooltip } from '@/components/TransactionCostTooltip';
 import { contractService } from '@/lib/contractService';
 import { useAccount, useChainId } from 'wagmi';
 
@@ -54,6 +55,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
   const [isOptingIn, setIsOptingIn] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<bigint | null>(null);
+  const [entropyFee, setEntropyFee] = useState<bigint | null>(null);
+  const [gasEstimate, setGasEstimate] = useState<bigint | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
   if (!task) {
@@ -79,11 +82,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
     allowsRandomAssignment: task.allowsRandomAssignment || false
   };
 
+  // Check if task is already assigned (either opted in or randomly assigned)
+  const isTaskAssigned = !!safeTask.assignee;
+  
   // Hide member assignment dropdown for done tasks or tasks that already have an assignee
-  const shouldShowMemberAssignment = status !== 'done' && !safeTask.assignee && members && members.length > 0;
+  const shouldShowMemberAssignment = status !== 'done' && !isTaskAssigned && members && members.length > 0;
 
-  // Hide random assignment button for done tasks
-  const shouldShowRandomAssignment = status !== 'done';
+  // Hide random assignment button for done tasks or already assigned tasks
+  const shouldShowRandomAssignment = status !== 'done' && !isTaskAssigned;
+
+  // Handle fee estimation callback to capture individual fee components
+  const handleFeeEstimated = (totalFee: bigint, entropy?: bigint, gas?: bigint) => {
+    setEstimatedFee(totalFee);
+    setEntropyFee(entropy || null);
+    setGasEstimate(gas || null);
+  };
 
   const handleOptIn = async () => {
     console.log('TaskCard: Opt in clicked for task:', safeTask.id);
@@ -113,7 +126,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
   };
 
   const handleRandomAssignment = async () => {
-    console.log('TaskCard: Smart contract assignment clicked for task:', safeTask.id);
+    console.log('TaskCard: Random assignment clicked for task:', safeTask.id);
     setIsAssigning(true);
     setTxHash(null);
     
@@ -141,7 +154,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       setTxHash(transactionHash);
       
       const metadata = generateTaskMetadata({
-        action: 'smart_contract_assignment',
+        action: 'random_assignment',
         taskId: safeTask.id,
         timestamp: new Date().toISOString(),
         eligibleMembers: availableMembers,
@@ -156,7 +169,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
       // Send quirky notification
       notificationService.notifyTaskUpdate(safeTask.title, 'submitted for random assignment');
       
-      console.log('TaskCard: Smart contract assignment submitted:', metadata);
+      console.log('TaskCard: Random assignment submitted:', metadata);
     } catch (error) {
       console.error('TaskCard: Failed to assign via smart contract:', error);
       
@@ -312,7 +325,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
             </div>
           )}
           
-          {!safeTask.assignee && (
+          {!isTaskAssigned && (
             <div className="flex items-center space-x-2">
               {safeTask.allowsOptIn && (
                 <Button 
@@ -335,31 +348,37 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
           
           {shouldShowRandomAssignment && (
             <div className="pt-2 border-t border-white/10 space-y-2">
-              {/* Show fee estimate if members are available */}
+              <div className="flex items-center justify-between">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={handleRandomAssignment}
+                  disabled={isAssigning}
+                  className="flex-1 text-xs h-7 bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
+                >
+                  <Dice6 className="w-3 h-3 mr-1" />
+                  {isAssigning ? 'Assigning...' : 'Random Assignment'}
+                </Button>
+                
+                {estimatedFee && entropyFee && gasEstimate && (
+                  <TransactionCostTooltip
+                    totalFee={estimatedFee}
+                    entropyFee={entropyFee}
+                    gasEstimate={gasEstimate}
+                    className="ml-2"
+                  />
+                )}
+              </div>
+              
+              {/* Hidden fee estimator to get the fee data */}
               {members && members.length > 0 && (
-                <FeeEstimator
-                  taskId={safeTask.id}
-                  eligibleMembers={members.map(m => m.address).filter(Boolean)}
-                  onFeeEstimated={setEstimatedFee}
-                  className="mb-2"
-                />
-              )}
-              
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={handleRandomAssignment}
-                disabled={isAssigning}
-                className="w-full text-xs h-7 bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30"
-              >
-                <Dice6 className="w-3 h-3 mr-1" />
-                {isAssigning ? 'Assigning via Smart Contract...' : 'Smart Contract Assignment'}
-              </Button>
-              
-              {estimatedFee && (
-                <p className="text-xs text-gray-400 text-center">
-                  Uses Pyth Entropy for true randomness
-                </p>
+                <div className="hidden">
+                  <FeeEstimator
+                    taskId={safeTask.id}
+                    eligibleMembers={members.map(m => m.address).filter(Boolean)}
+                    onFeeEstimated={handleFeeEstimated}
+                  />
+                </div>
               )}
               
               {txHash && (

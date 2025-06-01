@@ -246,7 +246,8 @@ class ContractServiceImpl implements ContractService {
         args: [taskId, eligibleMembers as `0x${string}`[], userRandomNumber],
         value: feeWithBuffer,
         chainId,
-        account: account as `0x${string}`
+        account: account as `0x${string}`,
+        chain: chainId === optimism.id ? optimism : optimismSepolia
       });
 
       console.log('Task assignment transaction submitted:', txHash);
