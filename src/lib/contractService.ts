@@ -104,14 +104,14 @@ export const ROLE_MAPPING = {
   'operations': CONTRACT_ROLES.OPERATIONS_ROLE
 } as const;
 
-// Domain mapping for task types
+// Domain mapping for task types - fix TypeScript issue with array types
 export const DOMAIN_MAPPING = {
-  'governance': ['governance', 'strategy', 'unassigned'],
-  'treasury': ['accounting', 'business_development', 'strategy', 'unassigned'],
-  'technical': ['tech', 'contracts', 'unassigned'],
-  'community': ['business_development', 'strategy', 'unassigned'],
-  'grants': ['accounting', 'business_development', 'strategy', 'unassigned'],
-  'operations': ['business_development', 'strategy', 'unassigned']
+  'governance': ['governance', 'strategy', 'unassigned'] as const,
+  'treasury': ['accounting', 'business_development', 'strategy', 'unassigned'] as const,
+  'technical': ['tech', 'contracts', 'unassigned'] as const,
+  'community': ['business_development', 'strategy', 'unassigned'] as const,
+  'grants': ['accounting', 'business_development', 'strategy', 'unassigned'] as const,
+  'operations': ['business_development', 'strategy', 'unassigned'] as const
 } as const;
 
 export interface ContractService {
@@ -272,10 +272,15 @@ class ContractServiceImpl implements ContractService {
   }
 
   filterMembersByDomain(members: Member[], taskType: string): Member[] {
-    const allowedDomains = DOMAIN_MAPPING[taskType as keyof typeof DOMAIN_MAPPING] || ['unassigned'];
+    const allowedDomains = DOMAIN_MAPPING[taskType as keyof typeof DOMAIN_MAPPING];
+    
+    if (!allowedDomains) {
+      console.warn(`Unknown task type ${taskType}, using all available members`);
+      return members;
+    }
     
     const filteredMembers = members.filter(member => 
-      member.domain && allowedDomains.includes(member.domain)
+      member.domain && allowedDomains.includes(member.domain as any)
     );
     
     // If no members match the domain criteria, fall back to all members

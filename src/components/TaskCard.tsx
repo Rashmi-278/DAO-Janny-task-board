@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import { FeeEstimator } from '@/components/FeeEstimator';
 import { RandomAssignmentHover } from '@/components/RandomAssignmentHover';
 import { contractService } from '@/lib/contractService';
 import { useAccount, useChainId } from 'wagmi';
+import { useParams } from 'react-router-dom';
 
 interface Task {
   id: string;
@@ -47,11 +49,24 @@ const typeColors = {
   operations: 'bg-indigo-500/20 text-indigo-300'
 };
 
+// Helper function to check DAO membership
+const checkDAOMembership = async (daoId: string, voterAddress: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`https://membersuri.daostar.org/is_member/${daoId}.eth?voter=${voterAddress}&onchain=${daoId}`);
+    const data = await response.json();
+    return data.is_member === true;
+  } catch (error) {
+    console.error('Failed to check DAO membership:', error);
+    return false;
+  }
+};
+
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members = [], status }) => {
   console.log('TaskCard: Rendering with task:', task);
   
   const { address } = useAccount();
   const chainId = useChainId();
+  const { daoId } = useParams();
   const [isOptingIn, setIsOptingIn] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<bigint | null>(null);
@@ -100,19 +115,38 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
 
   const handleOptIn = async () => {
     console.log('TaskCard: Opt in clicked for task:', safeTask.id);
+    
+    if (!address) {
+      console.error('Wallet not connected');
+      return;
+    }
+
+    if (!daoId) {
+      console.error('DAO ID not found');
+      return;
+    }
+
     setIsOptingIn(true);
     
     try {
+      // Check if user is a member of the DAO
+      const isMember = await checkDAOMembership(daoId, address);
+      if (!isMember) {
+        console.error('User is not a member of this DAO');
+        // You might want to show a toast notification here
+        return;
+      }
+
       const metadata = generateTaskMetadata({
         action: 'delegate_opt_in',
         taskId: safeTask.id,
         timestamp: new Date().toISOString(),
-        delegateAddress: 'user.eth',
+        delegateAddress: address,
         taskDetails: safeTask
       });
 
       await saveToFilecoin(metadata);
-      onTaskUpdate?.(safeTask.id, { assignee: 'user.eth' });
+      onTaskUpdate?.(safeTask.id, { assignee: address });
       
       // Send quirky notification
       notificationService.notifyTaskUpdate(safeTask.title, 'opted in');
@@ -165,8 +199,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
         taskDetails: safeTask,
         transactionHash,
         randomnessSource: 'pyth_entropy',
-        chainId,
-        domainFilter: safeTask.type
+        chainId
       });
 
       await saveToFilecoin(metadata);
@@ -195,8 +228,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
         assignedDelegate: randomMember.address,
         taskDetails: safeTask,
         randomnessSource: 'client_fallback',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        domainFilter: safeTask.type
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
 
       await saveToFilecoin(metadata);
@@ -234,7 +266,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
         taskId: safeTask.id,
         timestamp: new Date().toISOString(),
         delegateAddress: selectedMember.address,
-        taskDetails: { ...safeTask, assignedMember: selectedMember }
+        taskDetails: safeTask
       });
 
       await saveToFilecoin(metadata);
@@ -247,6 +279,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
     } catch (error) {
       console.error('TaskCard: Failed to assign member:', error);
     }
+  };
+
+  // Helper function to display assignee (either wallet address or ENS name)
+  const displayAssignee = (assigneeAddress: string) => {
+    // If it's the connected wallet, show a truncated version
+    if (assigneeAddress === address) {
+      return `${assigneeAddress.slice(0, 6)}...${assigneeAddress.slice(-4)} (You)`;
+    }
+    
+    // For other addresses, try to find the member name or show truncated address
+    const member = members.find(m => m.address === assigneeAddress);
+    if (member && member.name) {
+      return member.name;
+    }
+    
+    return `${assigneeAddress.slice(0, 6)}...${assigneeAddress.slice(-4)}`;
   };
 
   return (
@@ -324,7 +372,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
           {safeTask.assignee && (
             <div className="flex items-center text-xs text-gray-400">
               <User className="w-3 h-3 mr-2 flex-shrink-0" />
-              <span className="truncate">{safeTask.assignee}</span>
+              <span className="truncate">{displayAssignee(safeTask.assignee)}</span>
               {txHash && (
                 <Badge className="ml-2 bg-blue-500/20 text-blue-300 text-xs">
                   TX: {txHash.slice(0, 8)}...
@@ -340,7 +388,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate, members 
                   size="sm" 
                   variant="outline"
                   onClick={handleOptIn}
-                  disabled={isOptingIn}
+                  disabled={isOptingIn || !address}
                   className="text-xs h-7 bg-white/20 text-white hover:bg-white/10 hover:text-white hover:border-white/30 flex-shrink-0"
                 >
                   {isOptingIn ? (
