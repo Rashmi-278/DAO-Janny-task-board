@@ -12,6 +12,8 @@ import Index from "./pages/Index";
 import MemberRoleAllocation from "./pages/MemberRoleAllocation";
 import DAOKanbanBoard from "./pages/DAOKanbanBoard";
 import MemberProfile from "./pages/MemberProfile";
+import ProposalCategorization from "./pages/ProposalCategorization";
+import MetadataDashboard from "./pages/MetadataDashboard";
 import NotFound from "./pages/NotFound";
 import { Web3Provider } from "./lib/Web3Provider";
 
@@ -30,6 +32,8 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/dao/:daoId" element={<MemberRoleAllocation />} />
                 <Route path="/dao/:daoId/board" element={<DAOKanbanBoard />} />
+                <Route path="/dao/:daoId/categorization" element={<ProposalCategorization />} />
+                <Route path="/metadata" element={<MetadataDashboard />} />
                 <Route path="/profile" element={<MemberProfile />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
